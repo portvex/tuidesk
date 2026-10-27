@@ -1,0 +1,134 @@
+# Release: on a pushed tag v<version>, run the same checks as the git hooks (.cargo-husky/hooks),
+# build every artifact `cargo xtask dist` can make, and publish them as a GitHub release.
+# Linux, Windows, the source tarball and the recipes are built on Linux; the universal macOS
+# executable needs a macOS host.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks scans the whole history.
+          fetch-depth: 0
+
+      - name: Tag matches Cargo.toml
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "tuidesk") | .version')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match Cargo.toml version $version"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-deny,cargo-audit,gitleaks
+      # The end-to-end tests drive tuidesk inside tmux.
+      - run: sudo apt-get update && sudo apt-get install -y tmux
+
+      # pre-commit
+      - name: gitleaks
+        run: gitleaks git --redact -v .
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --all-targets --quiet -- -D warnings
+
+      # pre-push
+      - name: tests with coverage check
+        run: scripts/coverage.sh --check
+      - name: cargo deny
+        run: cargo deny check --hide-inclusion-graph
+      - name: cargo audit
+        run: cargo audit
+
+  dist-linux:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,x86_64-pc-windows-gnu,aarch64-pc-windows-gnullvm
+      - uses: Swatinem/rust-cache@v2
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
+      - run: sudo apt-get update && sudo apt-get install -y nsis
+      # Naming the kinds makes a missing tool an error instead of a skipped package.
+      - run: cargo xtask dist linux deb rpm windows source recipes --out dist
+      # The release job writes one SHA256SUMS over the artifacts from every host.
+      - run: rm dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux
+          path: dist/
+          if-no-files-found: error
+
+  dist-macos:
+    needs: checks
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo xtask dist macos --out dist
+      - run: rm dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-macos
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: [dist-linux, dist-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      # Release assets are flat: the recipes (PKGBUILD, APKBUILD, tuidesk.rb) go next to the
+      # packages, and SHA256SUMS covers everything uploaded.
+      - name: Collect assets
+        run: |
+          mkdir assets
+          find dist -type f -exec cp {} assets/ \;
+          cd assets
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" assets/* \
+            --repo "$GITHUB_REPOSITORY" --title "tuidesk ${GITHUB_REF_NAME#v}" \
+            --generate-notes --verify-tag
