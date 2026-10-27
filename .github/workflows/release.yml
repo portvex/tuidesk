@@ -22,7 +22,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # gitleaks scans the whole history.
           fetch-depth: 0
@@ -42,9 +42,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov,cargo-deny,cargo-audit,gitleaks
+          tool: cargo-llvm-cov,cargo-deny,cargo-audit
       # The end-to-end tests drive tuidesk inside tmux.
       - run: sudo apt-get update && sudo apt-get install -y tmux
+      # install-action does not carry gitleaks; use its release binary.
+      - name: Install gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin gitleaks
 
       # pre-commit
       - name: gitleaks
@@ -66,7 +71,7 @@ jobs:
     needs: checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,x86_64-pc-windows-gnu,aarch64-pc-windows-gnullvm
@@ -82,7 +87,7 @@ jobs:
       - run: cargo xtask dist linux deb rpm windows source recipes --out dist
       # The release job writes one SHA256SUMS over the artifacts from every host.
       - run: rm dist/SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-linux
           path: dist/
@@ -92,14 +97,14 @@ jobs:
     needs: checks
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - run: cargo xtask dist macos --out dist
       - run: rm dist/SHA256SUMS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-macos
           path: dist/
@@ -111,7 +116,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: dist
