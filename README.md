@@ -57,13 +57,17 @@ and on Windows without the background server (see below).
 | Platform | Package | Install |
 |---|---|---|
 | Any Linux | static executable (musl, x86_64 / aarch64) | unpack `tuidesk-<v>-<arch>-unknown-linux-musl.tar.gz`, put `tuidesk` on `PATH` |
-| Debian, Ubuntu | `.deb` | `sudo apt install ./tuidesk_<v>-1_amd64.deb` |
-| Fedora, RHEL, openSUSE | `.rpm` | `sudo dnf install ./tuidesk-<v>-1.x86_64.rpm` |
+| Debian, Ubuntu (x86_64) | `.deb` | `sudo apt install ./tuidesk_<v>-1_amd64.deb` |
+| Debian, Ubuntu (ARM64) | `.deb` | `sudo apt install ./tuidesk_<v>-1_arm64.deb` |
+| Fedora, RHEL, openSUSE (x86_64) | `.rpm` | `sudo dnf install ./tuidesk-<v>-1.x86_64.rpm` |
+| Fedora, RHEL, openSUSE (ARM64) | `.rpm` | `sudo dnf install ./tuidesk-<v>-1.aarch64.rpm` |
 | Arch Linux | `PKGBUILD` | `makepkg -si` |
 | Alpine | `APKBUILD` | `abuild -r` |
 | NixOS, Nix | `flake.nix` | `nix run github:portvex/tuidesk`, or `nix profile install github:portvex/tuidesk` |
 | macOS | Homebrew formula, or universal executable | `brew install portvex/tap/tuidesk` |
-| Windows | NSIS installer, or portable `.zip` | run `tuidesk-<v>-windows-x86_64-setup.exe` (per user, adds to PATH) |
+| Windows (x86_64) | NSIS installer | run `tuidesk-<v>-windows-x86_64-setup.exe` (per user, adds to PATH) |
+| Windows (ARM64) | NSIS installer | run `tuidesk-<v>-windows-arm64-setup.exe` (per user, adds to PATH) |
+| Windows (x86_64 / ARM64) | portable `.zip` | unpack `tuidesk-<v>-windows-<arch>-portable.zip`, run `tuidesk.exe` from it |
 
 Every package installs the manual pages:
 

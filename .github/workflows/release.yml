@@ -83,8 +83,9 @@ jobs:
         with:
           tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
       - run: sudo apt-get update && sudo apt-get install -y nsis
-      # Naming the kinds makes a missing tool an error instead of a skipped package.
-      - run: cargo xtask dist linux deb rpm windows source recipes --out dist
+      # Naming the kinds makes a missing tool an error instead of a skipped package. The source
+      # tarball comes first, while the checkout is still clean of build output.
+      - run: cargo xtask dist source recipes linux deb rpm windows --out dist
       # The release job writes one SHA256SUMS over the artifacts from every host.
       - run: rm dist/SHA256SUMS
       - uses: actions/upload-artifact@v7
