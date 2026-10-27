@@ -1,0 +1,262 @@
+# Built-in Kickoff catalogue: well-known terminal programs. Entries whose program is not
+# installed are hidden (general.hide_missing_apps). [[apps]] in config.toml are added to
+# this list, or replace the entry with the same name; general.hidden_apps removes entries.
+# "command" runs through /bin/sh, so arguments and pipes work.
+
+# ---------------------------------------------------------------- System
+[[apps]]
+name = "Terminal"
+command = "$SHELL"
+category = "System"
+description = "Interactive shell"
+
+[[apps]]
+name = "System Monitor"
+command = "btop"
+category = "System"
+description = "btop resource monitor"
+
+[[apps]]
+name = "Processes"
+command = "htop"
+category = "System"
+description = "htop process viewer"
+
+[[apps]]
+name = "Bottom"
+command = "btm"
+category = "System"
+description = "bottom system monitor"
+
+[[apps]]
+name = "Glances"
+command = "glances"
+category = "System"
+description = "Glances system overview"
+
+[[apps]]
+name = "Docker"
+command = "lazydocker"
+category = "System"
+description = "lazydocker container manager"
+
+[[apps]]
+name = "Kubernetes"
+command = "k9s"
+category = "System"
+description = "k9s cluster manager"
+
+[[apps]]
+name = "Log Viewer"
+command = "lnav"
+category = "System"
+description = "lnav log file navigator"
+
+# ---------------------------------------------------------------- Files
+[[apps]]
+name = "Files"
+command = "yazi"
+category = "Files"
+description = "yazi file manager"
+
+[[apps]]
+name = "Ranger"
+command = "ranger"
+category = "Files"
+description = "ranger file manager"
+
+[[apps]]
+name = "lf"
+command = "lf"
+category = "Files"
+description = "lf file manager"
+
+[[apps]]
+name = "nnn"
+command = "nnn"
+category = "Files"
+description = "nnn file manager"
+
+[[apps]]
+name = "Midnight Commander"
+command = "mc"
+category = "Files"
+description = "Two-pane file manager"
+
+[[apps]]
+name = "Broot"
+command = "broot"
+category = "Files"
+description = "broot tree navigator"
+
+[[apps]]
+name = "Disk Usage"
+command = "ncdu ~"
+category = "Files"
+description = "ncdu disk usage analyzer"
+
+[[apps]]
+name = "Disk Usage (gdu)"
+command = "gdu ~"
+category = "Files"
+description = "gdu disk usage analyzer"
+
+# ---------------------------------------------------------------- Development
+[[apps]]
+name = "Editor"
+command = "nvim"
+category = "Development"
+description = "Neovim text editor"
+
+[[apps]]
+name = "Vim"
+command = "vim"
+category = "Development"
+description = "Vim text editor"
+
+[[apps]]
+name = "Helix"
+command = "hx"
+category = "Development"
+description = "Helix text editor"
+
+[[apps]]
+name = "Micro"
+command = "micro"
+category = "Development"
+description = "micro text editor"
+
+[[apps]]
+name = "Emacs"
+command = "emacs -nw"
+category = "Development"
+description = "Emacs in the terminal"
+
+[[apps]]
+name = "Kakoune"
+command = "kak"
+category = "Development"
+description = "Kakoune text editor"
+
+[[apps]]
+name = "Git"
+command = "lazygit"
+category = "Development"
+description = "lazygit in the current directory"
+
+[[apps]]
+name = "GitUI"
+command = "gitui"
+category = "Development"
+description = "gitui in the current directory"
+
+[[apps]]
+name = "Tig"
+command = "tig"
+category = "Development"
+description = "tig git history browser"
+
+[[apps]]
+name = "Python"
+command = "python3"
+category = "Development"
+description = "Python REPL"
+
+[[apps]]
+name = "IPython"
+command = "ipython"
+category = "Development"
+description = "IPython REPL"
+
+[[apps]]
+name = "Node.js"
+command = "node"
+category = "Development"
+description = "Node.js REPL"
+
+[[apps]]
+name = "SQLite"
+command = "sqlite3"
+category = "Development"
+description = "SQLite shell"
+
+# ---------------------------------------------------------------- Internet
+[[apps]]
+name = "Mail (aerc)"
+command = "aerc"
+category = "Internet"
+description = "aerc email client"
+
+[[apps]]
+name = "Mail (NeoMutt)"
+command = "neomutt"
+category = "Internet"
+description = "NeoMutt email client"
+
+[[apps]]
+name = "News Feeds"
+command = "newsboat"
+category = "Internet"
+description = "newsboat RSS reader"
+
+[[apps]]
+name = "WeeChat"
+command = "weechat"
+category = "Internet"
+description = "WeeChat IRC and chat client"
+
+[[apps]]
+name = "Irssi"
+command = "irssi"
+category = "Internet"
+description = "Irssi IRC client"
+
+[[apps]]
+name = "Web Browser"
+command = "w3m https://lite.duckduckgo.com"
+category = "Internet"
+description = "w3m text web browser"
+
+# ---------------------------------------------------------------- Multimedia
+[[apps]]
+name = "Spotify"
+command = "ncspot"
+category = "Multimedia"
+description = "ncspot Spotify client"
+
+[[apps]]
+name = "Music (cmus)"
+command = "cmus"
+category = "Multimedia"
+description = "cmus music player"
+
+[[apps]]
+name = "Music (ncmpcpp)"
+command = "ncmpcpp"
+category = "Multimedia"
+description = "ncmpcpp MPD client"
+
+# ---------------------------------------------------------------- Office
+[[apps]]
+name = "Calendar"
+command = "calcurse"
+category = "Office"
+description = "calcurse calendar and todo list"
+
+[[apps]]
+name = "Tasks"
+command = "taskwarrior-tui"
+category = "Office"
+description = "Taskwarrior task list"
+
+[[apps]]
+name = "Spreadsheet"
+command = "sc-im"
+category = "Office"
+description = "sc-im spreadsheet"
+
+[[apps]]
+name = "Calculator"
+command = "qalc"
+category = "Office"
+description = "qalculate calculator"

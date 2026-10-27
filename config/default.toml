@@ -1,0 +1,223 @@
+# tuidesk configuration
+# Location: $XDG_CONFIG_HOME/tuidesk/config.toml (default ~/.config/tuidesk/config.toml;
+# on Windows %APPDATA%\tuidesk\config.toml)
+# This file is hot-reloaded on save. Any key you omit falls back to the built-in default.
+
+[general]
+# Shell used for "spawn_shell". Empty means $SHELL, then /bin/sh.
+shell = ""
+# Prefix key for window manager commands (works in every terminal, like tmux).
+prefix = "ctrl+space"
+# Initial layout: "floating" (KDE style), or a tiled one: "master" (master/stack),
+# "monocle" (one window at a time), "grid", "columns" or "bsp" (binary splits).
+layout = "floating"
+# Share of the screen width used by the master window in tiling mode.
+master_ratio = 0.55
+# Gap in cells between tiled windows.
+gaps = 0
+# Lines of scrollback kept per window.
+scrollback = 5000
+# Color output: "auto", "truecolor", "256" or "16" (use "16" on the Linux console).
+color_mode = "auto"
+# Default size of new floating windows, as a percentage of the desktop.
+window_width = 70
+window_height = 70
+# Close a window when its program exits.
+close_on_exit = true
+# Clicking into a window focuses it; with this on, hovering is enough.
+focus_follows_mouse = false
+# Dim the content of unfocused windows.
+dim_inactive = false
+# Seconds a notification popup stays visible.
+notification_timeout = 5
+# Hide launcher entries whose program is not installed.
+hide_missing_apps = true
+# Include the built-in catalogue of common terminal programs in Kickoff.
+builtin_apps = true
+# Names of Kickoff entries to leave out, e.g. ["Python", "Disk Usage"].
+hidden_apps = []
+# Commands opened in windows at startup, e.g. ["$SHELL", "btop"].
+# Only used when there is no saved session to restore.
+autostart = []
+# Number of virtual desktops (1-9).
+desktops = 4
+# Save open windows (command, directory, geometry, desktop) and reopen them next start.
+restore_session = true
+# New windows start in the focused window's directory.
+inherit_cwd = true
+# Show images from programs (yazi previews, kitty icat, chafa, timg, img2sixel, imgcat).
+# Needs a host terminal with kitty graphics Unicode placeholders: kitty or Ghostty.
+images = true
+# How images reach your terminal: "auto" (detect), "kitty" (Unicode placeholders: kitty,
+# Ghostty), "iterm" (iTerm2, WezTerm, VS Code), "sixel" (foot, xterm, Konsole, ...) or "none".
+image_protocol = "auto"
+# Optional desktop names, shown in the pager, e.g. ["Main", "Code", "Web", "Chat"].
+# Right-click a desktop in the pager to rename it while running.
+desktop_names = []
+
+[theme]
+# Presets: "breeze-dark", "breeze-light", "tty16". Any color below overrides the preset.
+# Colors: "#rrggbb", "reset", a name ("blue", "lightblue", ...) or a 0-255 index.
+preset = "breeze-dark"
+# border = "plain" | "rounded" | "double" | "thick" | "ascii"
+# wallpaper = "#1b1e20"
+# accent = "#3daee9"
+
+[panel]
+position = "bottom"
+# Widgets before "tasks" are aligned left, widgets after it are aligned right.
+# Builtins: kickoff, pager, tasks, layout, cpu, mem, battery, bell, clock.
+# Lua widgets registered with tuidesk.widget("name", ...) are referenced as "lua:name".
+widgets = ["kickoff", "pager", "tasks", "layout", "cpu", "mem", "battery", "bell", "clock"]
+kickoff_label = " tuidesk "
+clock_format = "%a %d %b  %H:%M"
+
+# Wallpapers, per desktop ("1".."9") or for all ("default"). Kinds:
+#   logo (default)  the tuidesk logo and key hints
+#   none            plain color
+#   art             ASCII art from `text` or `file`, placed at `position`
+#   pattern         `text` repeated over the whole desktop, e.g. ". " or "+-"
+#   lua             multi-line text from a Lua widget (`widget`, see tuidesk.widget)
+# color/fg override the theme's wallpaper colors.
+# [wallpaper.default]
+# kind = "pattern"
+# text = ". "
+#
+# [wallpaper.2]
+# kind = "art"
+# file = "~/.config/tuidesk/art/mountains.txt"
+# position = "bottom-right"
+# color = "#102030"
+
+# Desktop widgets, drawn on the wallpaper under the windows. Kinds:
+#   clock    big clock (`format`, default "%H:%M") and the date
+#   notes    a text file; click it to edit in $EDITOR
+#   sysinfo  CPU, memory and battery bars
+#   lua      text from a Lua widget (`widget`)
+# position: top-left, top, top-right, left, center, right, bottom-left, bottom, bottom-right.
+# desktops: 1-based list; all when omitted. width/height override the automatic size.
+# [[desktop_widgets]]
+# kind = "clock"
+# position = "top-right"
+#
+# [[desktop_widgets]]
+# kind = "notes"
+# file = "~/notes.md"
+# position = "bottom-left"
+# desktops = [1]
+
+[screenshot]
+# Where screenshots are saved, as tuidesk-YYYYmmdd-HHMMSS-mmm.<format>.
+dir = "~/Pictures/tuidesk"
+# txt (plain text), ansi (colored text for cat / less -R), html or svg.
+format = "html"
+# After saving, copy "path", "text" (plain text of the shot) or "none" to the clipboard.
+copy = "path"
+
+# Keybindings. Values are actions:
+#   kickoff, spawn_shell, spawn <command>, launch <app name>, close, maximize, minimize,
+#   focus_next, focus_prev, switcher, switcher_prev, tile_left, tile_right, tile_top,
+#   tile_bottom, toggle_layout, toggle_floating, swap_master, window_mode, scroll_up,
+#   scroll_down, desktop <n>, desktop_next, desktop_prev, move_to_desktop <n>,
+#   move_next_desktop, move_prev_desktop, paste, copy_mode, clipboard, help,
+#   window_menu, toggle_above, rename, rename_desktop, runner, overview, cycle_layout,
+#   screenshot, screenshot window, screenshot region,
+#   layout <name>, notifications, settings,
+#   detach, reload, quit, lua <global function name>
+# "none" turns off a default binding. The Settings dialog (prefix S) edits these too.
+# Direct keys are captured before the focused program sees them, so keep this list small.
+[keys.global]
+"alt+f1" = "kickoff"
+"alt+f2" = "runner"
+"ctrl+f9" = "overview"
+"alt+tab" = "switcher"
+"alt+shift+tab" = "switcher_prev"
+"alt+f4" = "close"
+"alt+f9" = "minimize"
+"alt+f10" = "maximize"
+"alt+enter" = "spawn_shell"
+"shift+pageup" = "scroll_up"
+"shift+pagedown" = "scroll_down"
+"ctrl+f1" = "desktop 1"
+"ctrl+f2" = "desktop 2"
+"ctrl+f3" = "desktop 3"
+"ctrl+f4" = "desktop 4"
+
+# Pressed after the prefix key. Pressing the prefix twice sends it to the program.
+[keys.prefix]
+"space" = "kickoff"
+"enter" = "spawn_shell"
+"c" = "spawn_shell"
+"x" = "close"
+"m" = "maximize"
+"n" = "minimize"
+"tab" = "focus_next"
+"shift+tab" = "focus_prev"
+"h" = "tile_left"
+"l" = "tile_right"
+"k" = "tile_top"
+"j" = "tile_bottom"
+"left" = "tile_left"
+"right" = "tile_right"
+"up" = "maximize"
+"t" = "toggle_layout"
+"T" = "cycle_layout"
+"f" = "toggle_floating"
+"s" = "swap_master"
+"w" = "window_mode"
+"[" = "copy_mode"
+"]" = "paste"
+"v" = "clipboard"
+"?" = "help"
+"o" = "window_menu"
+"a" = "toggle_above"
+"R" = "rename"
+"W" = "overview"
+"P" = "screenshot"
+"ctrl+p" = "screenshot window"
+"alt+p" = "screenshot region"
+"b" = "notifications"
+"S" = "settings"
+"d" = "detach"
+"p" = "paste"
+"1" = "desktop 1"
+"2" = "desktop 2"
+"3" = "desktop 3"
+"4" = "desktop 4"
+"5" = "desktop 5"
+"6" = "desktop 6"
+"7" = "desktop 7"
+"8" = "desktop 8"
+"9" = "desktop 9"
+"." = "desktop_next"
+"," = "desktop_prev"
+">" = "move_next_desktop"
+"<" = "move_prev_desktop"
+"r" = "runner"
+"ctrl+r" = "reload"
+"q" = "quit"
+"e" = "launch Editor"
+"y" = "launch Files"
+
+# Kickoff menu entries. tuidesk has a built-in catalogue of common terminal programs
+# (see `tuidesk --print-apps`); entries here are added to it, and one with the same name
+# as a built-in entry replaces it. "command" runs through /bin/sh, so arguments and pipes work.
+# [[apps]]
+# name = "Notes"
+# command = "nvim ~/notes.md"
+# category = "Office"
+# description = "My notes"
+
+# Window rules apply when a window opens. Match on the first word of the command
+# ("command") and/or a substring of the title ("title"). Settings: width and height
+# (percent), x and y (cells), maximized, minimized, floating, above (keep on top),
+# desktop (1-based; the window opens there without switching to it).
+[[rules]]
+command = "btop"
+width = 90
+height = 85
+
+[[rules]]
+command = "ncdu"
+width = 60
+height = 75

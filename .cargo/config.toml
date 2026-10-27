@@ -1,0 +1,9 @@
+# Project shortcuts: `cargo lint`, `cargo fmt-check`, `cargo supply-chain`, `cargo xtask`.
+[alias]
+# Release tooling: `cargo xtask dist` builds and packages tuidesk for every platform (xtask/).
+xtask = "run --quiet --package xtask --"
+lint = "clippy --all-targets -- -D warnings"
+fmt-check = "fmt --all -- --check"
+# Supply chain: licenses, bans, sources and advisories (cargo-deny). A cargo alias runs one
+# command, so run `cargo audit` (RustSec) separately; the pre-push hook runs both.
+supply-chain = "deny check"

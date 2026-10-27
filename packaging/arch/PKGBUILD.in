@@ -1,0 +1,47 @@
+# Maintainer: portvex
+# Template: `cargo xtask dist recipes` fills in the version and checksum (dist/packaging/arch/).
+# Follows https://wiki.archlinux.org/title/Rust_package_guidelines
+
+pkgname=tuidesk
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='A KDE Plasma style desktop that runs inside a terminal'
+arch=('x86_64' 'aarch64')
+url='https://github.com/portvex/tuidesk'
+license=('MIT')
+depends=('gcc-libs' 'glibc')
+makedepends=('cargo')
+# makepkg's LTO flags would compile the vendored Lua (mlua) to GCC LTO objects that rustc's
+# linker cannot read; Rust's own LTO is set in Cargo.toml.
+options=('!lto')
+source=("$pkgname-$pkgver.tar.gz::@URL@")
+sha256sums=('@SHA256@')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release --package tuidesk
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo test --frozen --package tuidesk --lib
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm0755 -t "$pkgdir/usr/bin/" target/release/tuidesk
+  install -Dm0644 -t "$pkgdir/usr/share/man/man1/" man/tuidesk.1
+  install -Dm0644 -t "$pkgdir/usr/share/man/man5/" man/tuidesk-config.5
+  install -Dm0644 -t "$pkgdir/usr/share/man/man7/" man/tuidesk-lua.7
+  install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
+  install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
+}

@@ -1,0 +1,41 @@
+# Contributor: portvex
+# Template: `cargo xtask dist recipes` fills in the version and checksum (dist/packaging/alpine/).
+# abuild only accepts a "Maintainer:" line with an email address, which aports requires when
+# the package is submitted; add one then.
+pkgname=tuidesk
+pkgver=@VERSION@
+pkgrel=0
+pkgdesc="A KDE Plasma style desktop that runs inside a terminal"
+url="https://github.com/portvex/tuidesk"
+arch="x86_64 aarch64"
+license="MIT"
+makedepends="cargo cargo-auditable"
+subpackages="$pkgname-doc"
+source="$pkgname-$pkgver.tar.gz::@URL@"
+# cargo fetch downloads the crates in prepare().
+options="net"
+
+prepare() {
+	default_prepare
+	cargo fetch --target="$CTARGET" --locked
+}
+
+build() {
+	cargo auditable build --frozen --release --package tuidesk
+}
+
+check() {
+	cargo test --frozen --package tuidesk --lib
+}
+
+package() {
+	install -Dm755 target/release/tuidesk -t "$pkgdir"/usr/bin/
+	install -Dm644 man/tuidesk.1 -t "$pkgdir"/usr/share/man/man1/
+	install -Dm644 man/tuidesk-config.5 -t "$pkgdir"/usr/share/man/man5/
+	install -Dm644 man/tuidesk-lua.7 -t "$pkgdir"/usr/share/man/man7/
+	install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
+
+sha512sums="
+@SHA512@  $pkgname-$pkgver.tar.gz
+"

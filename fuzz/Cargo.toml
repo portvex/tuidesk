@@ -1,0 +1,72 @@
+[package]
+name = "tuidesk-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+ratatui = "0.30"
+
+[dependencies.tuidesk]
+path = ".."
+
+[[bin]]
+name = "output_splitter"
+path = "fuzz_targets/output_splitter.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kitty_commands"
+path = "fuzz_targets/kitty_commands.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sixel"
+path = "fuzz_targets/sixel.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "iterm_image"
+path = "fuzz_targets/iterm_image.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ipc_frames"
+path = "fuzz_targets/ipc_frames.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "text_inputs"
+path = "fuzz_targets/text_inputs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "config"
+path = "fuzz_targets/config.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tile_layout"
+path = "fuzz_targets/tile_layout.rs"
+test = false
+doc = false
+bench = false

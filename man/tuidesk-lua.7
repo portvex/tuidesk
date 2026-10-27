@@ -1,0 +1,167 @@
+.TH TUIDESK\-LUA 7 2026-10-27 "tuidesk 0.1.0" "Miscellaneous"
+.SH NAME
+tuidesk\-lua \- Lua plugin interface of tuidesk
+.SH SYNOPSIS
+.I ~/.config/tuidesk/init.lua
+.SH DESCRIPTION
+.BR tuidesk (1)
+runs
+.I init.lua
+in Lua 5.4 when it starts, and again whenever the file is saved.
+Modules in
+.I ~/.config/tuidesk/lua/
+can be loaded with
+.BR require .
+The interface is the global table
+.BR tuidesk .
+.PP
+Errors are shown as notifications.
+Each call into Lua may run for 2 seconds before it is stopped, and actions started from Lua
+may nest 4 levels deep, so a faulty script cannot freeze or crash the desktop.
+.SH FUNCTIONS
+.TP
+.BI tuidesk.notify( title " [, " body " [, " seconds "]])"
+Show a notification.
+.TP
+.BI tuidesk.spawn( command )
+Open a window running
+.I command
+through
+.BR /bin/sh .
+.TP
+.BI tuidesk.action( name )
+Run a key binding action, such as
+.B \(dqmaximize\(dq
+or
+.BR "\(dqdesktop 2\(dq" ;
+see
+.BR tuidesk\-config (5).
+.TP
+.BI tuidesk.bind( key ", " function )
+A direct key binding, such as
+.BR \(dqalt+g\(dq .
+.TP
+.BI tuidesk.bind_prefix( key ", " function )
+A binding used after the prefix key.
+.TP
+.BI tuidesk.on( event ", " function )
+Call
+.I function
+on an event; see
+.BR EVENTS .
+.TP
+.BI tuidesk.widget( name ", " function " [, " seconds "])"
+Register a widget whose text is
+.IR function 's
+result, refreshed every
+.I seconds
+(default 1, at least 0.2).
+Show it in the panel by adding
+.BI \(dqlua: name \(dq
+to
+.BR panel.widgets ,
+or on the desktop as a
+.B lua
+wallpaper or desktop widget.
+.TP
+.BI tuidesk.rule{ ... }
+Add a window rule, with the keys of
+.B [[rules]]
+in
+.BR tuidesk\-config (5):
+.BR command ,
+.BR title ,
+.BR width ,
+.BR height ,
+.BR x ,
+.BR y ,
+.BR maximized ,
+.BR minimized ,
+.BR floating ,
+.BR above ,
+.BR desktop .
+.TP
+.B tuidesk.windows()
+A list of window tables.
+.TP
+.BI tuidesk.focus( id "), tuidesk.close(" id )
+Focus or close a window.
+.SH EVENTS
+.TP 14
+.B startup
+Once, after the session is restored.
+.TP
+.B tick
+Every second.
+.TP
+.BR window_open ", " window_close
+A window opened or closed; the handler receives its window table.
+.TP
+.B focus
+Another window got the focus; the handler receives its window table.
+.SH WINDOW TABLES
+.TP 12
+.B id
+Number used by
+.BR tuidesk.focus ,
+.B tuidesk.close
+and
+.BR "tuidesk msg" .
+.TP
+.BR title ", " command
+The window's title and command.
+.TP
+.BR focused ", " minimized
+Booleans.
+.TP
+.B desktop
+The desktop the window is on.
+.TP
+.B exit_code
+The program's exit status, in
+.B window_close
+handlers.
+.SH EXAMPLES
+Open lazygit maximized with the prefix key, then
+.BR g :
+.PP
+.RS
+.nf
+tuidesk.bind_prefix("g", function()
+  tuidesk.spawn("lazygit")
+end)
+tuidesk.rule { command = "lazygit", maximized = true }
+.fi
+.RE
+.PP
+A load average panel widget, shown by adding
+.B \(dqlua:load\(dq
+to
+.BR panel.widgets :
+.PP
+.RS
+.nf
+tuidesk.widget("load", function()
+  local f = io.popen("cut \-d\(aq \(aq \-f1\-3 /proc/loadavg")
+  local out = f:read("*l") or ""
+  f:close()
+  return "load " .. out
+end, 5)
+.fi
+.RE
+.PP
+Report programs that exit with an error:
+.PP
+.RS
+.nf
+tuidesk.on("window_close", function(win)
+  if win.exit_code and win.exit_code \(ti= 0 then
+    tuidesk.notify(win.title, "exited with code " .. win.exit_code)
+  end
+end)
+.fi
+.RE
+.SH SEE ALSO
+.BR tuidesk (1),
+.BR tuidesk\-config (5),
+.BR lua (1)

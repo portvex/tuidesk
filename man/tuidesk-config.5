@@ -1,0 +1,472 @@
+.TH TUIDESK\-CONFIG 5 2026-10-27 "tuidesk 0.1.0" "File Formats"
+.SH NAME
+tuidesk\-config \- tuidesk configuration file
+.SH SYNOPSIS
+.I $XDG_CONFIG_HOME/tuidesk/config.toml
+.br
+.I ~/.config/tuidesk/config.toml
+.SH DESCRIPTION
+.BR tuidesk (1)
+reads its settings from a TOML file.
+The file is created with every option and a comment on first start, and it is reloaded
+whenever it is saved.
+The values in the file are merged over the built\-in defaults
+.RB ( "tuidesk \-\-print\-config" ),
+so a file only needs the keys that differ.
+Tables are merged key by key; any other value, including an array, replaces the default.
+.PP
+System Settings (prefix key, then
+.BR S )
+edits the common options with a live preview and saves them into this file, keeping its
+comments and layout.
+.PP
+Colors are written as
+.BR \(dq#rrggbb\(dq ,
+a name such as
+.B \(dqblue\(dq
+or
+.BR \(dqlightblue\(dq ,
+a 0\-255 palette index, or
+.BR \(dqreset\(dq .
+Paths may start with
+.BR ~ .
+.SH GENERAL
+The
+.B [general]
+table.
+.TP
+.BR shell " (string, default \(dq\(dq)"
+Shell for new terminal windows.
+Empty means
+.BR $SHELL ,
+then
+.BR /bin/sh .
+.TP
+.BR prefix " (key, default \(dqctrl+space\(dq)"
+The prefix key for window manager commands; see
+.BR KEYS .
+.TP
+.BR layout " (default \(dqfloating\(dq)"
+Initial layout of each desktop:
+.B floating
+(windows go where you put them), or a tiled one:
+.B master
+(master and stack),
+.B monocle
+(one window at a time),
+.BR grid ,
+.B columns
+or
+.B bsp
+(binary splits).
+.TP
+.BR master_ratio " (0.1\-0.9, default 0.55)"
+Share of the width used by the master window in tiled layouts.
+.TP
+.BR gaps " (cells, default 0)"
+Gap between tiled windows.
+.TP
+.BR scrollback " (lines, default 5000)"
+History kept per window.
+.TP
+.BR color_mode " (default \(dqauto\(dq)"
+.BR auto ,
+.BR truecolor ,
+.B 256
+or
+.BR 16 .
+Use
+.B 16
+on the Linux console.
+.TP
+.BR window_width ", " window_height " (percent, default 70)"
+Size of new floating windows, relative to the desktop.
+.TP
+.BR close_on_exit " (bool, default true)"
+Close a window when its program exits.
+.TP
+.BR focus_follows_mouse " (bool, default false)"
+Focus the window under the pointer without clicking.
+.TP
+.BR dim_inactive " (bool, default false)"
+Dim the content of unfocused windows.
+.TP
+.BR notification_timeout " (seconds, default 5)"
+How long a notification popup stays.
+.TP
+.BR hide_missing_apps " (bool, default true)"
+Leave launcher entries out when their program is not found on
+.BR $PATH .
+.TP
+.BR builtin_apps " (bool, default true)"
+Include the built\-in catalogue of common terminal programs in the launcher; see
+.BR APPS .
+.TP
+.BR hidden_apps " (array of names, default [])"
+Launcher entries to leave out, matched by name without regard to case.
+.TP
+.BR autostart " (array of commands, default [])"
+Commands opened in windows when a server starts without a saved session.
+.TP
+.BR desktops " (1\-9, default 4)"
+Number of virtual desktops.
+.TP
+.BR desktop_names " (array of strings, default [])"
+Names shown in the pager and when switching; empty entries show the number.
+.TP
+.BR restore_session " (bool, default true)"
+Save open windows and reopen them on the next start.
+.TP
+.BR inherit_cwd " (bool, default true)"
+New windows start in the focused window's directory.
+.TP
+.BR images " (bool, default true)"
+Show images that programs send with the kitty graphics, Sixel or iTerm2 protocols.
+.TP
+.BR image_protocol " (default \(dqauto\(dq)"
+How images reach the host terminal:
+.B auto
+(detect),
+.B kitty
+(Unicode placeholders: kitty, Ghostty),
+.B iterm
+(iTerm2, WezTerm, VS Code),
+.B sixel
+(foot, xterm, Konsole) or
+.BR none .
+.SH THEME
+The
+.B [theme]
+table.
+.TP
+.BR preset " (default \(dqbreeze\-dark\(dq)"
+.BR breeze\-dark ,
+.B breeze\-light
+or
+.B tty16
+(16 colors, for the Linux console).
+.TP
+.B border
+Window border style:
+.BR plain ,
+.BR rounded ,
+.BR double ,
+.B thick
+or
+.BR ascii .
+.PP
+Any of these colors overrides the preset:
+.BR accent ,
+.BR wallpaper ,
+.BR wallpaper_fg ,
+.BR panel_bg ,
+.BR panel_fg ,
+.BR task_active_bg ,
+.BR task_active_fg ,
+.BR title_active_bg ,
+.BR title_active_fg ,
+.BR title_inactive_bg ,
+.BR title_inactive_fg ,
+.BR border_active ,
+.BR border_inactive ,
+.BR term_bg ,
+.BR term_fg ,
+.BR menu_bg ,
+.BR menu_fg ,
+.BR menu_dim ,
+.BR menu_sel_bg ,
+.BR menu_sel_fg ,
+.BR notif_bg ,
+.BR notif_fg ,
+.BR urgent ,
+.BR button_close .
+.SH PANEL
+The
+.B [panel]
+table.
+.TP
+.BR position " (default \(dqbottom\(dq)"
+.B bottom
+or
+.BR top .
+.TP
+.B widgets
+Panel widgets in order.
+Widgets before
+.B tasks
+are aligned left, those after it right.
+Built in:
+.BR kickoff ,
+.BR pager ,
+.BR tasks ,
+.BR layout ,
+.BR cpu ,
+.BR mem ,
+.BR battery ,
+.BR bell ,
+.BR clock .
+A Lua widget registered as
+.I name
+is written
+.BI lua: name\fR.
+.TP
+.BR kickoff_label " (default \(dq tuidesk \(dq)"
+Text of the launcher button.
+.TP
+.BR clock_format " (default \(dq%a %d %b  %H:%M\(dq)"
+.BR strftime (3)
+format of the clock.
+.SH WALLPAPER
+.BI [wallpaper. n ]
+for desktop
+.I n
+(1\-9), over
+.B [wallpaper.default]
+for all desktops.
+.TP
+.B kind
+.B logo
+(default: the logo and key hints),
+.B none
+(plain color),
+.B art
+(ASCII art),
+.B pattern
+.RB ( text
+repeated over the desktop) or
+.B lua
+(text from a Lua widget).
+.TP
+.BR color ", " fg
+Background and text color, over the theme's.
+.TP
+.B text
+The art or the repeated pattern.
+.TP
+.B file
+A file with the art.
+.TP
+.B widget
+The Lua widget for
+.BR lua .
+.TP
+.B position
+Where art is placed:
+.B center
+(default),
+.BR top\-left ,
+.BR top ,
+.BR top\-right ,
+.BR left ,
+.BR right ,
+.BR bottom\-left ,
+.BR bottom ,
+.BR bottom\-right .
+.SH DESKTOP WIDGETS
+Each
+.B [[desktop_widgets]]
+entry is drawn on the wallpaper, under the windows.
+.TP
+.B kind
+.B clock
+(a big clock and the date),
+.B notes
+(a text file; click it to edit it in
+.BR $EDITOR ),
+.B sysinfo
+(CPU, memory and battery bars) or
+.B lua
+(text from a Lua widget).
+.TP
+.BR position " (default \(dqtop\-right\(dq)"
+As for wallpaper art.
+.TP
+.B desktops
+Array of 1\-based desktops to show on; all when omitted.
+.TP
+.BR title ", " file ", " widget ", " format
+The heading, the notes file, the Lua widget, and the
+.BR strftime (3)
+format of a clock (default
+.BR \(dq%H:%M\(dq ).
+.TP
+.BR width ", " height
+Size in cells instead of the automatic one.
+.SH SCREENSHOT
+The
+.B [screenshot]
+table.
+.TP
+.BR dir " (default \(dq~/Pictures/tuidesk\(dq)"
+Where screenshots are saved, as
+.BI tuidesk\- YYYYmmdd\-HHMMSS\-mmm . format\fR.
+.TP
+.BR format " (default \(dqhtml\(dq)"
+.B txt
+(plain text),
+.B ansi
+(colored text for
+.B cat
+or
+.BR "less \-R" ),
+.B html
+or
+.BR svg .
+.TP
+.BR copy " (default \(dqpath\(dq)"
+What to copy to the clipboard after saving:
+.BR path ,
+.B text
+or
+.BR none .
+.SH KEYS
+.B [keys.prefix]
+maps keys pressed after the prefix key to actions, and
+.B [keys.global]
+maps keys caught directly, before the focused program sees them.
+Keys are written like
+.BR ctrl+space ,
+.BR alt+shift+tab ,
+.BR f5 ,
+.B enter
+or a single character, where
+.B T
+means shift+t.
+The action
+.B none
+turns a default binding off.
+.PP
+Actions:
+.BR kickoff ,
+.BR spawn_shell ,
+.BI spawn " command" ,
+.BI launch " app name" ,
+.BR close ,
+.BR maximize ,
+.BR minimize ,
+.BR focus_next ,
+.BR focus_prev ,
+.BR switcher ,
+.BR switcher_prev ,
+.BR tile_left ,
+.BR tile_right ,
+.BR tile_top ,
+.BR tile_bottom ,
+.BR toggle_layout ,
+.BR cycle_layout ,
+.BI layout " name" ,
+.BR toggle_floating ,
+.BR swap_master ,
+.BR window_mode ,
+.BR scroll_up ,
+.BR scroll_down ,
+.BI desktop " n" ,
+.BR desktop_next ,
+.BR desktop_prev ,
+.BI move_to_desktop " n" ,
+.BR move_next_desktop ,
+.BR move_prev_desktop ,
+.BR paste ,
+.BR copy_mode ,
+.BR clipboard ,
+.BR help ,
+.BR window_menu ,
+.BR toggle_above ,
+.BR rename ,
+.BR rename_desktop ,
+.BR runner ,
+.BR overview ,
+.BR screenshot ,
+.BR "screenshot window" ,
+.BR "screenshot region" ,
+.BR notifications ,
+.BR settings ,
+.BR detach ,
+.BR reload ,
+.BR quit ,
+.BI lua " function"
+(call a global Lua function).
+The default bindings are listed in
+.BR tuidesk (1).
+.SH APPS
+The launcher (Kickoff and the runner) lists a built\-in catalogue of about 40 well\-known
+terminal programs
+.RB ( "tuidesk \-\-print\-apps" ),
+showing only those that are installed.
+Each
+.B [[apps]]
+entry is added to it; an entry with the same name as a built\-in one replaces it.
+.TP
+.B name
+Shown in the launcher, and used by
+.BI launch " name"\fR.
+.TP
+.B command
+Run through
+.BR /bin/sh ,
+so arguments and pipes work.
+.TP
+.BR category " (default \(dqOther\(dq)"
+The launcher tab it appears under.
+.TP
+.B description
+Shown next to the name.
+.SH RULES
+Each
+.B [[rules]]
+entry applies to new windows whose command's first word equals
+.B command
+and/or whose title contains
+.BR title .
+Window titles start as the launcher entry's name.
+.TP
+.BR width ", " height
+Size in percent of the desktop.
+.TP
+.BR x ", " y
+Position in cells.
+.TP
+.BR maximized ", " minimized ", " floating ", " above
+Booleans;
+.B above
+keeps the window on top of others.
+.TP
+.B desktop
+1\-based desktop to open on, without switching to it.
+.SH EXAMPLES
+.nf
+[general]
+layout = "master"
+desktops = 6
+desktop_names = ["Main", "Code", "Web", "Chat"]
+hidden_apps = ["Python"]
+
+[theme]
+preset = "breeze\-light"
+accent = "#ff8800"
+border = "rounded"
+
+[panel]
+position = "top"
+
+[keys.prefix]
+"g" = "launch Git"
+"v" = "spawn nvim ~/notes.md"
+
+[[apps]]
+name = "Notes"
+command = "nvim ~/notes.md"
+category = "Office"
+
+[[rules]]
+command = "htop"
+maximized = true
+.fi
+.SH FILES
+.TP
+.I ~/.config/tuidesk/config.toml
+This file; another directory can be given with
+.BR "tuidesk \-c" .
+.SH SEE ALSO
+.BR tuidesk (1),
+.BR tuidesk\-lua (7)

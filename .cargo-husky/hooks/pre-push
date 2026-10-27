@@ -1,0 +1,20 @@
+#!/bin/sh
+# Installed into .git/hooks by cargo-husky when the tests are built (source: .cargo-husky/hooks).
+# Full checks before pushing.
+set -e
+
+# The coverage check runs the whole test suite once, instrumented; without cargo-llvm-cov
+# just run the tests.
+if command -v cargo-llvm-cov >/dev/null 2>&1 && command -v rustup >/dev/null 2>&1; then
+  echo "pre-push: tests with coverage check"
+  scripts/coverage.sh --check
+else
+  echo "pre-push: cargo test (install cargo-llvm-cov for the coverage check)"
+  cargo test --quiet
+fi
+
+echo "pre-push: cargo deny"
+cargo deny check --hide-inclusion-graph
+
+echo "pre-push: cargo audit"
+cargo audit

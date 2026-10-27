@@ -1,0 +1,21 @@
+#!/bin/sh
+# Installed into .git/hooks by cargo-husky when the tests are built (source: .cargo-husky/hooks).
+# Fast checks before every commit.
+set -e
+
+# Secret scan. This repo sets core.hooksPath to .git/hooks, so the global gitleaks hook does
+# not run here; do it ourselves.
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks protect --staged --redact -v; then
+    echo "gitleaks found potential secrets in staged changes. Commit blocked."
+    exit 1
+  fi
+else
+  echo "warning: gitleaks not found, skipping secret scan"
+fi
+
+echo "pre-commit: cargo fmt --check"
+cargo fmt --all -- --check
+
+echo "pre-commit: cargo clippy"
+cargo clippy --all-targets --quiet -- -D warnings

@@ -1,0 +1,93 @@
+[package]
+name = "tuidesk"
+version = "0.1.0"
+edition = "2024"
+# sysinfo 0.39 needs 1.95.
+rust-version = "1.95"
+publish = false
+description = "A KDE Plasma style desktop that runs inside a terminal"
+authors = ["portvex"]
+license = "MIT"
+repository = "https://github.com/portvex/tuidesk"
+homepage = "https://github.com/portvex/tuidesk"
+readme = "README.md"
+keywords = ["terminal", "tui", "desktop", "window-manager", "multiplexer"]
+categories = ["command-line-utilities"]
+
+# The release tooling (`cargo xtask dist`) lives in xtask/; plain cargo commands only build
+# tuidesk. The fuzz targets are a separate cargo-fuzz project.
+[workspace]
+members = [".", "xtask"]
+default-members = ["."]
+exclude = ["fuzz"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+# Debian package (cargo deb), built from the static musl binary by `cargo xtask dist deb`.
+[package.metadata.deb]
+maintainer = "portvex"
+copyright = "2026, portvex"
+section = "utils"
+priority = "optional"
+depends = ""
+extended-description = """\
+tuidesk is a KDE Plasma style desktop for the terminal: floating and tiled windows, virtual \
+desktops, a panel with launcher, pager and task manager, a KRunner style runner, \
+notifications and screenshots. Every window is a real pseudo-terminal. Sessions keep running \
+in the background and can be reattached, like tmux."""
+assets = [
+    ["target/release/tuidesk", "usr/bin/", "755"],
+    ["man/tuidesk.1", "usr/share/man/man1/", "644"],
+    ["man/tuidesk-config.5", "usr/share/man/man5/", "644"],
+    ["man/tuidesk-lua.7", "usr/share/man/man7/", "644"],
+    ["README.md", "usr/share/doc/tuidesk/", "644"],
+]
+
+# RPM package (cargo generate-rpm), built from the static musl binary by `cargo xtask dist rpm`.
+[package.metadata.generate-rpm]
+summary = "A KDE Plasma style desktop that runs inside a terminal"
+assets = [
+    { source = "target/release/tuidesk", dest = "/usr/bin/tuidesk", mode = "755" },
+    { source = "man/tuidesk.1", dest = "/usr/share/man/man1/tuidesk.1", mode = "644", doc = true },
+    { source = "man/tuidesk-config.5", dest = "/usr/share/man/man5/tuidesk-config.5", mode = "644", doc = true },
+    { source = "man/tuidesk-lua.7", dest = "/usr/share/man/man7/tuidesk-lua.7", mode = "644", doc = true },
+    { source = "LICENSE", dest = "/usr/share/licenses/tuidesk/LICENSE", mode = "644", doc = true },
+    { source = "README.md", dest = "/usr/share/doc/tuidesk/README.md", mode = "644", doc = true },
+]
+
+[dependencies]
+alacritty_terminal = "0.26"
+anyhow = "1"
+base64 = "0.22"
+chrono = "0.4"
+color_quant = "1"
+crossterm = { version = "0.29", features = ["serde"] }
+dirs = "7"
+flate2 = "1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
+libc = "0.2"
+mlua = { version = "0.12", features = ["lua54", "vendored"] }
+portable-pty = "0.9"
+ratatui = "0.30"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+starship-battery = "0.12"
+sysinfo = "0.39"
+toml = "1"
+toml_edit = "0.25.17"
+unicode-width = "0.2"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+print_stderr = "allow"
+
+[dev-dependencies]
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }

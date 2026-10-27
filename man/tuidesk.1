@@ -1,0 +1,476 @@
+.TH TUIDESK 1 2026-10-27 "tuidesk 0.1.0" "User Commands"
+.SH NAME
+tuidesk \- a KDE Plasma style desktop for the terminal
+.SH SYNOPSIS
+.B tuidesk
+.RB [ \-S
+.IR name ]
+.RB [ \-c
+.IR dir ]
+.RB [ \-\-standalone ]
+.br
+.B tuidesk ls
+.br
+.B tuidesk kill
+.RB [ \-S
+.IR name ]
+.br
+.B tuidesk msg
+.IR command " [" argument ...]
+.br
+.B tuidesk
+.BR \-\-print\-config " | " \-\-print\-lua " | " \-\-print\-apps
+.br
+.B tuidesk
+.BR \-h " | " \-V
+.SH DESCRIPTION
+.B tuidesk
+runs a desktop inside a terminal: floating and tiled windows with title bars, virtual
+desktops, a panel with a launcher, pager, task manager and clock, a KRunner style runner,
+an overview of all windows, notifications and screenshots.
+Every window is a real pseudo\-terminal, so any program runs in it, including full screen
+programs such as
+.BR nvim (1),
+.BR htop (1)
+or
+.BR yazi (1).
+.PP
+Like
+.BR tmux (1),
+.B tuidesk
+runs a background server per session that owns the windows and their programs; the terminal
+it is started in is a client.
+Detaching (prefix key, then
+.BR d )
+or closing the terminal leaves the desktop running, and running
+.B tuidesk
+again reattaches to it.
+Attaching from another terminal detaches the one that was attached.
+.PP
+Sessions are saved on quit, on detach and every 30 seconds, and the windows, their working
+directories, geometry and desktops are restored when a server starts.
+.PP
+On Windows there is no background server:
+.B tuidesk
+runs in the terminal it is started in, as with
+.BR \-\-standalone ,
+and
+.BR ls ,
+.BR kill ,
+.B msg
+and detaching are not available.
+.SH OPTIONS
+.TP
+.BR \-S ", " \-\-session " \fIname\fR"
+Use the session
+.IR name ,
+starting its server if needed.
+The default is
+.BR default ,
+or the session of the window
+.B tuidesk
+runs in
+.RB ( $TUIDESK_SESSION ).
+Names are up to 32 letters, digits,
+.BR \- ,
+.B _
+or
+.BR . ,
+and do not start with a dot.
+.TP
+.BR \-c ", " \-\-config " \fIdir\fR"
+Read
+.B config.toml
+and
+.B init.lua
+from
+.I dir
+instead of the default configuration directory.
+.TP
+.B \-\-standalone
+Run the desktop in this terminal only, without a background server.
+Detaching is not possible, and the desktop ends with the terminal.
+Refuses to start while a background server owns the same session name.
+.TP
+.B \-\-print\-config
+Print the built\-in
+.B config.toml
+and exit.
+.TP
+.B \-\-print\-lua
+Print the built\-in
+.B init.lua
+and exit.
+.TP
+.B \-\-print\-apps
+Print the built\-in catalogue of launcher entries and exit.
+.TP
+.BR \-h ", " \-\-help
+Print a short usage summary and exit.
+.TP
+.BR \-V ", " \-\-version
+Print the version and exit.
+.SH COMMANDS
+.TP
+.BR ls ", " list
+List the running sessions.
+.TP
+.BR kill ", " kill\-server
+Save the session and stop its server, closing all its windows.
+.TP
+.BI msg " command"
+Send a command to a running session and print its answer.
+Inside a
+.B tuidesk
+window this talks to that window's session.
+.RS
+.TP
+.BI notify " title \fR[\fPbody\fR...]"
+Show a notification.
+.TP
+.BI spawn " command\fR..."
+Open a window running
+.IR command ;
+prints the new window's id.
+.TP
+.B windows
+List the windows: id, desktop, focus (marked
+.BR * ),
+title and command.
+.TP
+.BI focus " id" "\fR, \fPclose" " id"
+Focus or close a window.
+.TP
+.B desktops
+Print the current desktop and the number of desktops.
+.TP
+.BR screenshot " [" screen | window | \fIid\fR "] [" txt | ansi | html | svg "] [\fIpath\fR]"
+Save a screenshot and print its path.
+Relative paths are taken from the directory
+.B tuidesk msg
+runs in.
+.TP
+.BI lua " code"
+Run Lua in the plugin environment and print the results.
+.TP
+.IR action " [" argument ]
+Run any key binding action (see
+.BR tuidesk\-config (5)),
+for example
+.BR "desktop 2" ,
+.B "layout grid"
+or
+.BR detach .
+.TP
+.B help
+List these commands.
+.RE
+.SH KEYS
+Terminals cannot report the Super key, so window management uses a
+.I prefix key
+.RB ( ctrl+space
+by default) followed by another key, plus a few direct shortcuts.
+Pressing the prefix key twice sends it to the program.
+All bindings can be changed in
+.B [keys.prefix]
+and
+.B [keys.global]
+of the configuration file, or in System Settings.
+.SS After the prefix key
+.TP 14
+.BR space
+Kickoff launcher.
+.TP
+.BR enter ", " c
+New terminal window.
+.TP
+.B x
+Close the window.
+.TP
+.BR m ", " up
+Maximize or restore.
+.TP
+.B n
+Minimize.
+.TP
+.BR tab ", " shift+tab
+Next or previous window.
+.TP
+.BR 1 .. 9 ", " . ", " ,
+Go to desktop
+.IR n ,
+the next or the previous desktop.
+.TP
+.BR > ", " <
+Move the window to the next or previous desktop and follow it.
+.TP
+.BR h ", " l ", " k ", " j
+Quick tile left, right, top or bottom (in a tiled layout: move the window).
+The arrow keys do the same.
+.TP
+.BR t ", " T
+Toggle floating and tiled layout; cycle through all layouts.
+.TP
+.B f
+Float or unfloat the window in a tiled layout.
+.TP
+.B s
+Swap the window with the master.
+.TP
+.B w
+Keyboard move and resize mode.
+.TP
+.B [
+Copy mode (see
+.BR "COPY MODE" ).
+.TP
+.BR ] ", " p
+Paste the last copy.
+.TP
+.B v
+Clipboard history.
+.TP
+.B ?
+Key binding cheat sheet; type to filter.
+.TP
+.B o
+Window menu.
+.TP
+.B a
+Keep the window above others.
+.TP
+.B R
+Rename the window.
+.TP
+.B W
+Overview of all windows on all desktops.
+.TP
+.BR P ", " ctrl+p ", " alt+p
+Screenshot of the screen, the focused window, or a dragged region.
+.TP
+.B b
+Notification history.
+.TP
+.B S
+System Settings.
+.TP
+.BR e ", " y
+Launch the Editor or Files entry.
+.TP
+.B r
+Runner (see
+.BR RUNNER ).
+.TP
+.B ctrl+r
+Reload the configuration.
+.TP
+.B d
+Detach.
+.TP
+.B q
+Quit: save the session and close all windows.
+.SS Direct shortcuts
+.TP 14
+.BR alt+f1
+Kickoff launcher.
+.TP
+.B alt+f2
+Runner.
+.TP
+.B alt+tab
+Window switcher: hold Alt and press Tab to step, release Alt to pick.
+On terminals without the kitty keyboard protocol the highlighted window is picked after a
+short pause or on Enter.
+.TP
+.B alt+enter
+New terminal window.
+.TP
+.BR alt+f4 ", " alt+f9 ", " alt+f10
+Close, minimize, maximize.
+.TP
+.B ctrl+f9
+Overview.
+.TP
+.BR ctrl+f1 .. ctrl+f4
+Go to desktop 1 to 4.
+.TP
+.BR shift+pageup ", " shift+pagedown
+Scroll the window's history.
+.PP
+On macOS, Alt shortcuts need the terminal to send Option as Meta (Terminal.app: \(lqUse
+Option as Meta key\(rq; iTerm2: Left Option key sends Esc+).
+The prefix key works without this.
+.SH MOUSE
+Drag a title bar to move a window and its edges to resize it; Alt+drag moves and
+Alt+right\-drag resizes from anywhere in the window.
+Double\-click a title bar to maximize, middle\-click it to send the window to the back,
+right\-click it for the window menu.
+Dragging a window to a screen edge tiles it to that side.
+.PP
+In the panel, click a task to focus or minimize it, middle\-click it to close it, and drag
+it onto a desktop in the pager to move it there.
+Scroll over the panel to cycle windows, or over the pager to change desktops.
+Right\-click a desktop in the pager to rename it.
+.PP
+Dragging inside a window selects text (double\-click selects a word, triple\-click a line);
+the selection is copied to the clipboard history and to the host terminal's clipboard with
+OSC 52.
+Middle\-click pastes.
+Hold Shift to select in programs that use the mouse themselves.
+Ctrl+click opens an OSC 8 hyperlink.
+.SH RUNNER
+The runner searches as you type and mixes results from several sources:
+an arithmetic expression such as
+.B 2*(3+4)
+or
+.B sqrt(2)
+is calculated (Enter copies the result);
+a window title switches to that window;
+an application name launches it;
+a path such as
+.B ~/src/pro
+lists directories (Enter opens a shell there, Tab completes);
+.BI man " page"
+opens a manual page;
+action names such as
+.B layout grid
+run that action;
+anything else can be run as a command.
+.SH COPY MODE
+Copy mode moves a cursor through the window and its history.
+.TP 18
+.BR h " " j " " k " " l ", " w " " b " " e
+Move by character, line and word.
+.TP
+.BR 0 " " ^ " " $ ", " H " " M " " L ", " g " " G
+Line start and end, screen top, middle and bottom, history start and end.
+.TP
+.BR ctrl+u " " ctrl+d " " ctrl+b " " ctrl+f
+Half and full pages.
+.TP
+.BR / ", " ? ", " n ", " N
+Search forward or backward with a regular expression (case\-insensitive unless it contains
+capitals), repeat.
+.TP
+.BR v ", " V ", " ctrl+v
+Select characters, lines or a block.
+.TP
+.BR y ", " enter
+Copy and leave.
+.TP
+.B q
+Leave.
+.SH ENVIRONMENT
+.TP
+.B TUIDESK_RUNTIME_DIR
+Directory for the session sockets and server logs.
+.TP
+.B XDG_RUNTIME_DIR
+Used for sockets as
+.B $XDG_RUNTIME_DIR/tuidesk
+when
+.B TUIDESK_RUNTIME_DIR
+is not set; otherwise
+.BI /tmp/tuidesk\- uid
+is used.
+The directory must belong to the user and is kept at mode 0700.
+.TP
+.B XDG_CONFIG_HOME
+Configuration directory base (default
+.BR ~/.config ).
+.TP
+.B XDG_STATE_HOME
+Saved session directory base (default
+.BR ~/.local/state ).
+.TP
+.B SHELL
+Shell for new terminal windows when
+.B general.shell
+is empty; otherwise
+.BR /bin/sh .
+.TP
+.B EDITOR
+Editor for notes widgets.
+.TP
+.BR TUIDESK ", " TUIDESK_SESSION
+Set inside every window.
+.B TUIDESK
+stops a nested desktop from starting;
+.B TUIDESK_SESSION
+makes
+.B tuidesk msg
+talk to the window's own session.
+.TP
+.BR TERM ", " COLORTERM ", " TERM_PROGRAM
+Used to choose the color depth and the image protocol of the host terminal.
+.SH FILES
+.TP
+.I ~/.config/tuidesk/config.toml
+Configuration, created on first start and reloaded when saved; see
+.BR tuidesk\-config (5).
+.TP
+.I ~/.config/tuidesk/init.lua
+Lua plugins, created on first start and reloaded when saved; see
+.BR tuidesk\-lua (7).
+.TP
+.I ~/.config/tuidesk/lua/
+Lua modules that
+.B init.lua
+can
+.BR require .
+.TP
+.IR ~/.local/state/tuidesk/session\- name .json
+Saved session.
+A file that cannot be read is kept as
+.IB name .json.bak
+instead of being overwritten.
+.TP
+.IR ~/Pictures/tuidesk/
+Screenshots (setting
+.BR screenshot.dir ).
+.TP
+.IR $TUIDESK_RUNTIME_DIR/ name ".sock, " name .log
+A session's socket and server log.
+.PP
+On Windows the configuration is in
+.I %APPDATA%\(rstuidesk
+and saved sessions are in
+.IR %LOCALAPPDATA%\(rstuidesk .
+.SH EXIT STATUS
+.B tuidesk
+exits 0 on success and 1 on an error, such as a session that cannot be reached, a socket
+directory owned by another user, or a
+.B tuidesk msg
+command that failed.
+.SH EXAMPLES
+Start a separate desktop for work, detach from it, and come back later:
+.PP
+.RS
+.nf
+tuidesk \-S work
+# prefix key, then d
+tuidesk \-S work
+.fi
+.RE
+.PP
+Open a window and notify when a build finishes, from a script or cron job:
+.PP
+.RS
+.nf
+tuidesk msg spawn btop
+make && tuidesk msg notify Build "make finished"
+.fi
+.RE
+.PP
+Save a screenshot of the focused window as SVG:
+.PP
+.RS
+.nf
+tuidesk msg screenshot window svg shot.svg
+.fi
+.RE
+.SH SEE ALSO
+.BR tuidesk\-config (5),
+.BR tuidesk\-lua (7),
+.BR tmux (1),
+.BR screen (1)
