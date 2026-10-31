@@ -52,7 +52,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y nsis
       # Naming the kinds makes a missing tool an error instead of a skipped package. The source
       # tarball comes first, while the checkout is still clean of build output.
-      - run: cargo xtask dist source recipes linux deb rpm windows --out dist
+      - run: cargo xtask dist source linux deb rpm windows --out dist
       # The release job writes one SHA256SUMS over the artifacts from every host.
       - run: rm dist/SHA256SUMS
       - uses: actions/upload-artifact@v7
@@ -84,11 +84,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: dist
           merge-multiple: true
+      # The Homebrew formula installs the macOS and Linux executables, so the recipes are made
+      # once both hosts' tarballs are here (the source tarball is reused, not rebuilt).
+      - run: cargo xtask dist recipes --out dist && rm dist/SHA256SUMS
       # Release assets are flat: the recipes (PKGBUILD, APKBUILD, tuidesk.rb) go next to the
       # packages, and SHA256SUMS covers everything uploaded.
       - name: Collect assets
@@ -105,3 +111,23 @@ jobs:
           gh release create "$GITHUB_REF_NAME" assets/* \
             --repo "$GITHUB_REPOSITORY" --title "tuidesk ${GITHUB_REF_NAME#v}" \
             --generate-notes --verify-tag
+      # The tap is pushed with a deploy key that can write to portvex/homebrew-tap only.
+      - name: Update the Homebrew tap
+        env:
+          TAP_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          key="$RUNNER_TEMP/tap-key"
+          printf '%s\n' "$TAP_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git clone --depth 1 git@github.com:portvex/homebrew-tap.git "$RUNNER_TEMP/tap"
+          cp dist/packaging/homebrew/Formula/tuidesk.rb "$RUNNER_TEMP/tap/Formula/tuidesk.rb"
+          cd "$RUNNER_TEMP/tap"
+          git add Formula/tuidesk.rb
+          if git diff --cached --quiet; then
+            echo "the tap already has this formula"
+          else
+            git -c user.name=portvex -c user.email=347037878+portvex@users.noreply.github.com \
+              commit -m "tuidesk ${GITHUB_REF_NAME#v}"
+            git push origin HEAD
+          fi

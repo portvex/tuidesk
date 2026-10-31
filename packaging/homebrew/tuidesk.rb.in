@@ -1,17 +1,25 @@
-# Template: `cargo xtask dist recipes` fills in the version and checksum
-# (dist/packaging/homebrew/Formula/tuidesk.rb), laid out like a tap repository such as
-# portvex/homebrew-tap.
+# Template: `cargo xtask dist recipes` fills in the version and the checksums of the release's
+# executables (dist/packaging/homebrew/Formula/tuidesk.rb), laid out like a tap repository such
+# as portvex/homebrew-tap. The formula installs the prebuilt executables: the universal one on
+# macOS, the static musl ones on Linux. Nothing is compiled, so no Rust toolchain is needed.
 class Tuidesk < Formula
   desc "KDE Plasma style desktop that runs inside a terminal"
   homepage "https://github.com/portvex/tuidesk"
-  url "@URL@"
-  sha256 "@SHA256@"
   license "MIT"
 
-  depends_on "rust" => :build
+  if OS.mac?
+    url "@RELEASE@/tuidesk-@VERSION@-macos-universal.tar.gz"
+    sha256 "@SHA256_MACOS@"
+  elsif Hardware::CPU.arm?
+    url "@RELEASE@/tuidesk-@VERSION@-aarch64-unknown-linux-musl.tar.gz"
+    sha256 "@SHA256_LINUX_AARCH64@"
+  else
+    url "@RELEASE@/tuidesk-@VERSION@-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "@SHA256_LINUX_X86_64@"
+  end
 
   def install
-    system "cargo", "install", *std_cargo_args
+    bin.install "tuidesk"
     man1.install "man/tuidesk.1"
     man5.install "man/tuidesk-config.5"
     man7.install "man/tuidesk-lua.7"
