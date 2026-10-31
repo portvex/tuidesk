@@ -412,6 +412,8 @@ pub struct App {
     /// The image protocol `regions_shown` were drawn with.
     shown_mode: crate::graphics::direct::ImageMode,
     scaled: crate::graphics::direct::ScaledCache,
+    /// Title bar buttons as icons, sent to the host like a window's images.
+    pub button_icons: crate::graphics::icons::ButtonIcons,
     /// Host cell size in pixels.
     cell_px: (u16, u16),
     /// Files shown on the desktop (wallpaper art, notes): path to (checked at, mtime, lines).
@@ -518,6 +520,7 @@ impl App {
             regions: Vec::new(),
             regions_shown: Vec::new(),
             shown_mode: crate::graphics::direct::ImageMode::None,
+            button_icons: Default::default(),
             scaled: Default::default(),
             cell_px: (8, 16),
             files: HashMap::new(),
@@ -1701,7 +1704,13 @@ impl App {
         if self.graphics_enabled() {
             let mut out = Vec::new();
             let transmit = self.image_mode() == crate::graphics::direct::ImageMode::Placeholders;
-            self.host_gfx.sync(self.wm.windows.iter_mut().map(|w| (w.id, &mut w.term.gfx)), &mut out, transmit);
+            let icons = self.cfg.general.pixel_buttons;
+            if icons {
+                self.button_icons.update(&self.theme, self.cell_px);
+            }
+            let windows = self.wm.windows.iter_mut().map(|w| (w.id, &mut w.term.gfx));
+            let icons = icons.then_some((crate::graphics::icons::OWNER, &mut self.button_icons.gfx));
+            self.host_gfx.sync(windows.chain(icons), &mut out, transmit);
             if !out.is_empty() {
                 display.send_raw(&out);
             }
@@ -1796,14 +1805,21 @@ impl App {
         Ok(())
     }
 
+    /// A window's image, or a title bar icon.
+    fn image(&self, win: u64, img: u32) -> Option<&crate::graphics::ImageData> {
+        if win == crate::graphics::icons::OWNER {
+            return self.button_icons.gfx.images.get(&img);
+        }
+        self.wm.get(win)?.term.gfx.images.get(&img)
+    }
+
     /// The visible image pieces of the last frame, with the generation of each image.
     fn direct_regions(&self) -> Vec<(crate::graphics::direct::Region, u64)> {
         self.regions
             .iter()
             .filter_map(|r| {
                 let (win, img) = self.host_gfx.owner(r.host_id)?;
-                let data = self.wm.get(win)?.term.gfx.images.get(&img)?;
-                Some((*r, data.generation))
+                Some((*r, self.image(win, img)?.generation))
             })
             .collect()
     }
@@ -1828,7 +1844,7 @@ impl App {
                 }
             }
             let Some((win, img)) = self.host_gfx.owner(r.host_id) else { continue };
-            let Some(data) = self.wm.get(win).and_then(|w| w.term.gfx.images.get(&img)).cloned() else { continue };
+            let Some(data) = self.image(win, img).cloned() else { continue };
             if let Some(piece) = self.scaled.piece(mode, &data, &r, self.cell_px) {
                 out.extend_from_slice(&direct::place(&r, &piece));
             }

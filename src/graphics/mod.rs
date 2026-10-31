@@ -8,6 +8,7 @@
 
 mod diacritics;
 pub mod direct;
+pub mod icons;
 mod sixel;
 
 use std::collections::HashMap;
