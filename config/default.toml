@@ -51,6 +51,8 @@ images = true
 # How images reach your terminal: "auto" (detect), "kitty" (Unicode placeholders: kitty,
 # Ghostty), "iterm" (iTerm2, WezTerm, VS Code), "sixel" (foot, xterm, Konsole, ...) or "none".
 image_protocol = "auto"
+# Draw the title bar buttons [_] [^] [x] as icons when the terminal shows images.
+pixel_buttons = true
 # Optional desktop names, shown in the pager, e.g. ["Main", "Code", "Web", "Chat"].
 # Right-click a desktop in the pager to rename it while running.
 desktop_names = []

@@ -36,8 +36,10 @@ impl Desk {
         for sub in ["cfg", "run", "state", "work"] {
             std::fs::create_dir_all(dir.join(sub)).unwrap();
         }
+        // The screen is read back as text, so the title bar buttons stay text even when the
+        // terminal running the tests shows images (Sixel through tmux, for one).
         let config = format!(
-            "[general]\nshell = \"/bin/sh\"\nnotification_timeout = 30\n{extra_config}\n\n\
+            "[general]\nshell = \"/bin/sh\"\nnotification_timeout = 30\npixel_buttons = false\n{extra_config}\n\n\
              [[apps]]\nname = \"Echo Test\"\ncommand = \"sh -c 'echo LAUNCHED-$((40+2)); sleep 600'\"\ncategory = \"Test\"\n"
         );
         std::fs::write(dir.join("cfg/config.toml"), config).unwrap();

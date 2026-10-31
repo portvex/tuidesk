@@ -101,6 +101,12 @@ pub const PAGES: &[Page] = &[
                 Kind::Choice(&["auto", "kitty", "iterm", "sixel", "none"]),
                 "How images reach your terminal; auto detects it",
             ),
+            field(
+                "general.pixel_buttons",
+                "Icon buttons",
+                Kind::Bool,
+                "Draw the title bar buttons as icons when the terminal shows images",
+            ),
         ],
         extra: Extra::None,
     },

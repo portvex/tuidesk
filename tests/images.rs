@@ -37,8 +37,14 @@ impl Host {
         Self::start_with(name, "placeholders")
     }
 
-    /// Start a server and attach a client whose terminal shows images with `mode`.
+    /// Start a server and attach a client whose terminal shows images with `mode`. The title bar
+    /// buttons stay text, so the only images are the ones a test's programs send.
     fn start_with(name: &str, mode: &str) -> Self {
+        Self::start_config(name, mode, "pixel_buttons = false\n")
+    }
+
+    /// Like `start_with`, with `general` appended to the config's [general] table.
+    fn start_config(name: &str, mode: &str, general: &str) -> Self {
         let dir = std::env::temp_dir().join(format!("tuidesk-img-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         for sub in ["cfg", "state", "work"] {
@@ -47,8 +53,8 @@ impl Host {
         // A short runtime dir keeps the socket path predictable.
         let run = PathBuf::from(format!("/tmp/ti-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&run);
-        std::fs::write(dir.join("cfg/config.toml"), "[general]\nshell = \"/bin/sh\"\nrestore_session = false\n")
-            .unwrap();
+        let config = format!("[general]\nshell = \"/bin/sh\"\nrestore_session = false\n{general}");
+        std::fs::write(dir.join("cfg/config.toml"), config).unwrap();
         std::fs::write(dir.join("cfg/init.lua"), "").unwrap();
         let server = Command::new(BIN)
             .args(["--server", "-S", "img", "--size", "100x30", "-c"])
@@ -373,4 +379,26 @@ fn gif_animations_on_sixel_terminals() {
     imgcat_gif(&h);
     let count = |t: &str| t.matches("\x1bP0;1;0q").count();
     h.wait_output("several sixel frames", |t| count(t) >= 6);
+}
+
+#[test]
+fn title_bar_buttons_are_icons() {
+    // kitty: eight 3x1-cell icons (four buttons, focused and not) reach the host as images, and
+    // the title bar shows placeholder cells for them.
+    let h = Host::start_config("icons", "placeholders", "");
+    h.msg(&["spawn", "sh -c 'echo ICONS; sleep 600'"]);
+    let icon = "f=32,s=30,v=20";
+    let out = h.wait_output("button icons", |t| t.matches(icon).count() >= 8 && t.contains(PLACEHOLDER));
+    assert_eq!(out.matches(icon).count(), 8, "each icon is sent once");
+    assert!(out.contains(&format!("p={},c=3,r=1", (3 << 9) | 1)), "a 3x1 virtual placement");
+    // The focused window's three buttons, three cells each (more if redrawn).
+    let cells = h.wait_output("button cells", |t| t.matches(PLACEHOLDER).count() >= 9);
+    assert_eq!(cells.matches(PLACEHOLDER).count() % 3, 0, "whole buttons");
+    // Screenshots keep the text buttons.
+    assert!(h.screen().contains("[x]"));
+
+    // iTerm2: the icons are drawn as 3x1 inline images.
+    let h = Host::start_config("iconsiterm", "iterm", "");
+    h.msg(&["spawn", "sh -c 'echo ICONS; sleep 600'"]);
+    h.wait_output("button icons", |t| t.matches("width=3;height=1;").count() >= 3);
 }
