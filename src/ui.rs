@@ -8,6 +8,7 @@ use ratatui::style::{Color, Modifier, Style};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::app::{App, Hits, Mode, PanelHit, RenameTarget, screen_layout};
+use crate::graphics::icons::{self, id as icon_id};
 use crate::settings::{Edit, Kind, PAGES, Row};
 use crate::theme::Theme;
 use crate::tray::Charge;
@@ -38,7 +39,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     for w in app.wm.stacking() {
         let is_focused = focused == Some(w.id);
         let images = (app.graphics_enabled() && !app.capturing).then_some(&app.host_gfx);
-        draw_window(buf, w, &app.theme, is_focused, dim && !is_focused, images);
+        let icons = images.filter(|_| app.cfg.general.pixel_buttons);
+        draw_window(buf, w, &app.theme, is_focused, dim && !is_focused, images, icons);
     }
     if app.mode == Mode::Overview {
         draw_overview(buf, desktop, app);
@@ -657,6 +659,7 @@ fn draw_window(
     focused: bool,
     dim: bool,
     images: Option<&crate::graphics::HostGraphics>,
+    icons: Option<&crate::graphics::HostGraphics>,
 ) {
     let f = w.frame.intersection(buf.area);
     if f.width < 4 || f.height < 3 {
@@ -689,6 +692,17 @@ fn draw_window(
     let avail = title_end.saturating_sub(f.x + 2) as usize;
     put(buf, f.x + 2, f.y, &truncate(&title, avail), title_end, title_style);
     for (r, b) in btns {
+        // As an icon: placeholder cells for the button's image (see graphics::icons).
+        let icon = icons.and_then(|host| host.host_id(crate::graphics::icons::OWNER, icon_id(b, w.maximized, focused)));
+        if let Some(hid) = icon.filter(|_| r.width == icons::COLS && r.right() <= buf.area.right()) {
+            let pid = crate::graphics::HostGraphics::placement_id(icons::COLS, icons::ROWS);
+            for col in 0..r.width {
+                if let Some(sym) = crate::graphics::placeholder(0, col as usize) {
+                    buf[(r.x + col, r.y)].set_symbol(&sym).set_style(image_style(bar, hid, pid));
+                }
+            }
+            continue;
+        }
         let (label, style) = match b {
             Button::Minimize => ("[_]", bar),
             Button::Maximize => (if w.maximized { "[v]" } else { "[^]" }, bar),

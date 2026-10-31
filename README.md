@@ -320,6 +320,10 @@ deletion, animation frames and control (`a=f`, `a=a`); Sixel; iTerm2 `File=` wit
 (PNG, JPEG, GIF including animated, WebP, BMP). Not supported: kitty frame composition between
 existing frames (`a=c`) and drawing images below text (`z < 0`).
 
+On those terminals the title bar buttons `[_] [^] [x]` are drawn as icons too (minimize, maximize
+or restore, and a red close button on the focused window), in the theme's title bar colors.
+Turn this off with `[general] pixel_buttons = false`; screenshots always show the text buttons.
+
 ## Screenshots
 
 Shots go to `~/Pictures/tuidesk/tuidesk-YYYYmmdd-HHMMSS-mmm.<format>`; the path (or the

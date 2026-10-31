@@ -127,6 +127,7 @@ pub struct General {
     pub desktop_names: Vec<String>,
     pub images: bool,
     pub image_protocol: String,
+    pub pixel_buttons: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
