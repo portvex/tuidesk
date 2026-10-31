@@ -22,8 +22,9 @@ Builds release artifacts into DIR (default: dist/). KINDs, default `all`:
   rpm       Fedora/RHEL/openSUSE packages of the static executables  needs cargo-generate-rpm
   macos     universal (arm64 + x86_64) executable as .tar.gz         needs a macOS host
   windows   portable .zip and NSIS installer (x86_64, arm64)         needs cargo-zigbuild, makensis
-  source    source tarball (what Arch, Alpine and Homebrew build from)
-  recipes   PKGBUILD, APKBUILD and Homebrew formula for this version, with the source checksum
+  source    source tarball (what Arch and Alpine build from)
+  recipes   PKGBUILD and APKBUILD for this version, with the source checksum, and the Homebrew
+            formula of the macos and linux executables (run after those kinds)
   all       every kind this host can build (macos only on macOS, NSIS only with makensis)
 
 The Nix flake (flake.nix) builds from the repository itself and needs no artifact.
@@ -253,7 +254,10 @@ impl Dist {
     }
 
     /// Package recipes for this version from `packaging/*/*.in`: @VERSION@, @URL@ (the source
-    /// tarball on the release page) and its checksums @SHA256@ and @SHA512@ (Alpine's).
+    /// tarball on the release page) and its checksums @SHA256@ and @SHA512@ (Alpine's). The
+    /// Homebrew formula installs the executables instead: @RELEASE@ (the release's download
+    /// address) and the checksums of their tarballs, which `macos` and `linux` must have built
+    /// into the output directory first.
     fn recipes(&self) -> Result<()> {
         let tarball = self.source_tarball();
         if !tarball.exists() {
@@ -262,18 +266,37 @@ impl Dist {
         let bytes = fs::read(&tarball)?;
         let sha256 = hex(&Sha256::digest(&bytes));
         let sha512 = hex(&Sha512::digest(&bytes));
-        let url = format!("{}/releases/download/v{v}/tuidesk-{v}.tar.gz", self.repository, v = self.version);
-        for (template, name) in [
-            ("packaging/arch/PKGBUILD.in", "arch/PKGBUILD"),
-            ("packaging/alpine/APKBUILD.in", "alpine/APKBUILD"),
-            ("packaging/homebrew/tuidesk.rb.in", "homebrew/Formula/tuidesk.rb"),
+        let release = format!("{}/releases/download/v{}", self.repository, self.version);
+        let url = format!("{release}/tuidesk-{}.tar.gz", self.version);
+        let mut executables = Vec::new();
+        for (key, rest) in [
+            ("@SHA256_MACOS@", "macos-universal"),
+            ("@SHA256_LINUX_X86_64@", LINUX[0]),
+            ("@SHA256_LINUX_AARCH64@", LINUX[1]),
         ] {
+            let file = self.out.join(format!("{}.tar.gz", self.name(rest)));
+            if file.exists() {
+                executables.push((key, self::sha256(&file)?));
+            }
+        }
+        let mut recipes =
+            vec![("packaging/arch/PKGBUILD.in", "arch/PKGBUILD"), ("packaging/alpine/APKBUILD.in", "alpine/APKBUILD")];
+        match (executables.len(), self.explicit) {
+            (3, _) => recipes.push(("packaging/homebrew/tuidesk.rb.in", "homebrew/Formula/tuidesk.rb")),
+            (_, true) => bail!("the Homebrew formula needs the macos and linux tarballs in {}", self.out.display()),
+            (_, false) => println!("skipping the Homebrew formula: it needs the macos and linux tarballs"),
+        }
+        for (template, name) in recipes {
             let text = fs::read_to_string(self.root.join(template)).with_context(|| format!("reading {template}"))?;
-            let text = text
+            let mut text = text
                 .replace("@VERSION@", &self.version)
+                .replace("@RELEASE@", &release)
                 .replace("@URL@", &url)
                 .replace("@SHA256@", &sha256)
                 .replace("@SHA512@", &sha512);
+            for (key, sum) in &executables {
+                text = text.replace(key, sum);
+            }
             let dest = self.out.join("packaging").join(name);
             fs::create_dir_all(dest.parent().unwrap())?;
             fs::write(&dest, text)?;

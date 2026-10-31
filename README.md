@@ -64,7 +64,7 @@ and on Windows without the background server (see below).
 | Arch Linux | `PKGBUILD` | `makepkg -si` |
 | Alpine | `APKBUILD` | `abuild -r` |
 | NixOS, Nix | `flake.nix` | `nix run github:portvex/tuidesk`, or `nix profile install github:portvex/tuidesk` |
-| macOS | Homebrew formula, or universal executable | `brew install portvex/tap/tuidesk` |
+| macOS, Linux | Homebrew formula (prebuilt executable, no Rust needed) | `brew install portvex/tap/tuidesk` |
 | Windows (x86_64) | NSIS installer | run `tuidesk-<v>-windows-x86_64-setup.exe` (per user, adds to PATH) |
 | Windows (ARM64) | NSIS installer | run `tuidesk-<v>-windows-arm64-setup.exe` (per user, adds to PATH) |
 | Windows (x86_64 / ARM64) | portable `.zip` | unpack `tuidesk-<v>-windows-<arch>-portable.zip`, run `tuidesk.exe` from it |
@@ -103,12 +103,14 @@ cargo xtask help                # the kinds and the tools each needs
 | `rpm` | `.rpm` of those executables | cargo-generate-rpm (`[package.metadata.generate-rpm]`) |
 | `macos` | universal (arm64 + x86_64) executable | cargo and lipo, on macOS |
 | `windows` | portable `.zip` and NSIS installer, x86_64 and arm64 | cargo-zigbuild and makensis (`packaging/windows/tuidesk.nsi`) |
-| `source` | `tuidesk-<v>.tar.gz` from git, what the recipes build from | git |
-| `recipes` | `PKGBUILD`, `APKBUILD` and `Formula/tuidesk.rb` for this version | templates in `packaging/`, with the source checksums |
+| `source` | `tuidesk-<v>.tar.gz` from git, what the Arch and Alpine recipes build from | git |
+| `recipes` | `PKGBUILD`, `APKBUILD` and `Formula/tuidesk.rb` for this version | templates in `packaging/`; the formula installs the `macos` and `linux` executables, so run it after those |
 
-For a release, tag `v<version>`, upload `dist/*` to the GitHub release (the recipes download
-`tuidesk-<v>.tar.gz` from there), and copy `dist/packaging/homebrew/Formula/tuidesk.rb` into
-the `portvex/homebrew-tap` repository. The Nix flake builds from the repository itself.
+For a release, bump `version` in Cargo.toml and the man pages, merge, and push the tag
+`v<version>`. The release workflow (`.github/workflows/release.yml`) runs the CI checks,
+builds everything on Linux and macOS, publishes the GitHub release (the recipes download from
+there), and pushes the new formula to the `portvex/homebrew-tap` repository with a deploy key
+(the `HOMEBREW_TAP_DEPLOY_KEY` secret). The Nix flake builds from the repository itself.
 tuidesk needs Rust 1.95 or newer to build (`rust-version` in Cargo.toml).
 
 `tuidesk` runs a background server per session that owns the windows; the terminal you start
