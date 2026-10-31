@@ -105,6 +105,13 @@ impl Desk {
         self.keys(&["Enter"]);
     }
 
+    /// Wait until the shell has run every line typed so far: it echoes `tag` with a computed
+    /// suffix, which the typed line itself does not show.
+    fn shell_done(&self, tag: &str) {
+        self.type_line(&format!("echo {tag}-$((40+2))"));
+        self.wait_for(tag, |s| s.contains(&format!("{tag}-42")));
+    }
+
     fn prefix(&self, key: &str) {
         self.keys(&["C-Space"]);
         self.keys(&[key]);
@@ -386,7 +393,8 @@ fn session_restores_windows_and_directories() {
     std::fs::create_dir_all(&sub).unwrap();
     d.open_shell();
     d.type_line(&format!("cd {}", sub.display()));
-    std::thread::sleep(Duration::from_millis(300));
+    // The session saves the shell's directory, so the cd must have run.
+    d.shell_done("cd-done");
     d.prefix("q");
     d.wait_for("exit message", |s| s.contains("[session default exited]"));
     d.run_client();
@@ -441,7 +449,7 @@ fn clipboard_history_pastes_older_entries() {
     // Programs copy with OSC 52; each copy lands in the history.
     d.type_line("printf '\\033]52;c;%s\\007' $(printf FIRST-CLIP | base64)");
     d.type_line("printf '\\033]52;c;%s\\007' $(printf SECOND-CLIP | base64)");
-    std::thread::sleep(Duration::from_millis(300));
+    d.shell_done("copied");
     d.prefix("v");
     let s = d.wait_for("clipboard picker", |s| s.contains("Clipboard") && s.contains("FIRST-CLIP"));
     let picker = &s[s.find("Clipboard").unwrap()..];
