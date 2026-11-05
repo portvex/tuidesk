@@ -4,6 +4,8 @@ A KDE Plasma style desktop that runs entirely inside a terminal. Windows are rea
 pseudo-terminals, so anything you already use (yazi, nvim, ncdu, btop, htop, lazygit,
 your shell) runs inside them.
 
+![tuidesk in Ghostty: htop, bat and a shell in floating windows, with the panel at the bottom](docs/screenshots/overview.png)
+
 - Floating windows with title bars, `[_] [^] [x]` buttons, mouse move/resize, double-click
   maximize, drag-to-edge quick tiling, Alt+drag move and Alt+right-drag resize
 - Per-desktop layouts: floating, or tiled as master/stack, monocle, grid, columns or bsp
@@ -37,6 +39,32 @@ your shell) runs inside them.
 - System Settings dialog for the theme, colors, panel widgets, key bindings and more, with live
   preview; it saves to config.toml and keeps your comments
 - Truecolor, 256 and 16 color output (works on the Linux console), several border styles
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/kickoff.png" alt="The Kickoff menu: apps by category, each with its icon"></td>
+    <td width="50%"><img src="docs/screenshots/tiling.png" alt="Three windows tiled as master and stack"></td>
+  </tr>
+  <tr>
+    <td>Kickoff (Alt+F1): apps by category, search, session actions</td>
+    <td>Tiling: master and stack, one of six layouts per desktop</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/runner.png" alt="The runner over the desktop"></td>
+    <td><img src="docs/screenshots/settings.png" alt="The System Settings dialog"></td>
+  </tr>
+  <tr>
+    <td>Runner (Alt+F2): apps, windows, a calculator, folders, man pages, actions</td>
+    <td>System Settings: every option, previewed live, saved to config.toml</td>
+  </tr>
+</table>
+
+Shown in Ghostty with the Breeze Dark theme; the title bar buttons, app and battery icons are
+pictures on terminals that show images (see [Images](#images)) and text elsewhere. The
+screenshots are stored with [Git LFS](https://git-lfs.com) (`git lfs install` once before
+cloning, or `git lfs pull` after).
 
 ## Build and run
 
