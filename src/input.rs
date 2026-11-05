@@ -802,6 +802,18 @@ impl App {
         if !matches!(m.kind, MouseEventKind::Moved) {
             self.dirty = true;
         }
+        // The title bar button under the pointer is highlighted (terminals that report pointer
+        // movement only).
+        if matches!(m.kind, MouseEventKind::Moved) {
+            let hover = match self.wm.hit_test(x, y) {
+                Some((id, crate::wm::Hit::Button(b))) => Some((id, b)),
+                _ => None,
+            };
+            if hover != self.hover {
+                self.hover = hover;
+                self.dirty = true;
+            }
+        }
 
         if self.drag.is_some() {
             match m.kind {

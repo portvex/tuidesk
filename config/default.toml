@@ -53,6 +53,9 @@ images = true
 image_protocol = "auto"
 # Draw the title bar buttons [_] [^] [x] as icons when the terminal shows images.
 pixel_buttons = true
+# Show app icons in Kickoff and the task manager, and the battery as an icon, when the
+# terminal shows images. Other terminals keep the text.
+pixel_icons = true
 # Optional desktop names, shown in the pager, e.g. ["Main", "Code", "Web", "Chat"].
 # Right-click a desktop in the pager to rename it while running.
 desktop_names = []
