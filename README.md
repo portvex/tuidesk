@@ -322,9 +322,16 @@ deletion, animation frames and control (`a=f`, `a=a`); Sixel; iTerm2 `File=` wit
 (PNG, JPEG, GIF including animated, WebP, BMP). Not supported: kitty frame composition between
 existing frames (`a=c`) and drawing images below text (`z < 0`).
 
-On those terminals the title bar buttons `[_] [^] [x]` are drawn as icons too (minimize, maximize
-or restore, and a red close button on the focused window), in the theme's title bar colors.
-Turn this off with `[general] pixel_buttons = false`; screenshots always show the text buttons.
+On those terminals tuidesk draws its own icons too:
+
+- the title bar buttons `[_] [^] [x]` (minimize, maximize or restore, and a red close button on
+  the focused window), in the theme's title bar colors, with a highlight under the pointer;
+- app icons by category in Kickoff and the task manager (a terminal for shells);
+- the battery in the panel, filled to its charge.
+
+Elsewhere the text stays, and the button under the pointer is shown in reverse video. Turn the
+icons off with `[general] pixel_buttons = false` (title bar) or `pixel_icons = false` (the rest);
+screenshots always show the text.
 
 ## Screenshots
 

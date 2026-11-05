@@ -107,6 +107,12 @@ pub const PAGES: &[Page] = &[
                 Kind::Bool,
                 "Draw the title bar buttons as icons when the terminal shows images",
             ),
+            field(
+                "general.pixel_icons",
+                "App icons",
+                Kind::Bool,
+                "App icons in Kickoff and the task manager, and a battery icon, when the terminal shows images",
+            ),
         ],
         extra: Extra::None,
     },

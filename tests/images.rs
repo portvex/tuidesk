@@ -38,9 +38,9 @@ impl Host {
     }
 
     /// Start a server and attach a client whose terminal shows images with `mode`. The title bar
-    /// buttons stay text, so the only images are the ones a test's programs send.
+    /// buttons and the panel stay text, so the only images are the ones a test's programs send.
     fn start_with(name: &str, mode: &str) -> Self {
-        Self::start_config(name, mode, "pixel_buttons = false\n")
+        Self::start_config(name, mode, "pixel_buttons = false\npixel_icons = false\n")
     }
 
     /// Like `start_with`, with `general` appended to the config's [general] table.
@@ -382,20 +382,21 @@ fn gif_animations_on_sixel_terminals() {
 }
 
 #[test]
-fn title_bar_buttons_are_icons() {
-    // kitty: eight 3x1-cell icons (four buttons, focused and not) reach the host as images, and
-    // the title bar shows placeholder cells for them.
+fn title_bar_buttons_and_panel_are_icons() {
+    // kitty: sixteen 3x1-cell button icons (four buttons, focused or not, under the pointer or
+    // not) and 2x1-cell app icons (nine kinds on four backgrounds) reach the host as images.
     let h = Host::start_config("icons", "placeholders", "");
     h.msg(&["spawn", "sh -c 'echo ICONS; sleep 600'"]);
-    let icon = "f=32,s=30,v=20";
-    let out = h.wait_output("button icons", |t| t.matches(icon).count() >= 8 && t.contains(PLACEHOLDER));
-    assert_eq!(out.matches(icon).count(), 8, "each icon is sent once");
+    let (button, app) = ("f=32,s=30,v=20", "f=32,s=20,v=20");
+    let out = h.wait_output("icons", |t| t.matches(button).count() >= 16 && t.matches(app).count() >= 36);
+    assert_eq!(out.matches(button).count(), 16, "each button icon is sent once");
     assert!(out.contains(&format!("p={},c=3,r=1", (3 << 9) | 1)), "a 3x1 virtual placement");
-    // The focused window's three buttons, three cells each (more if redrawn).
-    let cells = h.wait_output("button cells", |t| t.matches(PLACEHOLDER).count() >= 9);
-    assert_eq!(cells.matches(PLACEHOLDER).count() % 3, 0, "whole buttons");
-    // Screenshots keep the text buttons.
-    assert!(h.screen().contains("[x]"));
+    assert!(out.contains(&format!("p={},c=2,r=1", (2 << 9) | 1)), "a 2x1 virtual placement");
+    // The focused window's three buttons (three cells each) and its task's icon (two).
+    h.wait_output("icon cells", |t| t.matches(PLACEHOLDER).count() >= 11);
+    // Screenshots keep the text.
+    let screen = h.screen();
+    assert!(screen.contains("[x]"), "{screen}");
 
     // iTerm2: the icons are drawn as 3x1 inline images.
     let h = Host::start_config("iconsiterm", "iterm", "");
