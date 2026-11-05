@@ -412,8 +412,10 @@ pub struct App {
     /// The image protocol `regions_shown` were drawn with.
     shown_mode: crate::graphics::direct::ImageMode,
     scaled: crate::graphics::direct::ScaledCache,
-    /// Title bar buttons as icons, sent to the host like a window's images.
-    pub button_icons: crate::graphics::icons::ButtonIcons,
+    /// Icons (title bar buttons, apps, battery), sent to the host like a window's images.
+    pub icons: crate::graphics::icons::Icons,
+    /// The title bar button under the pointer: (window, button).
+    pub hover: Option<(u64, crate::wm::Button)>,
     /// Host cell size in pixels.
     cell_px: (u16, u16),
     /// Files shown on the desktop (wallpaper art, notes): path to (checked at, mtime, lines).
@@ -520,7 +522,8 @@ impl App {
             regions: Vec::new(),
             regions_shown: Vec::new(),
             shown_mode: crate::graphics::direct::ImageMode::None,
-            button_icons: Default::default(),
+            icons: Default::default(),
+            hover: None,
             scaled: Default::default(),
             cell_px: (8, 16),
             files: HashMap::new(),
@@ -1704,12 +1707,18 @@ impl App {
         if self.graphics_enabled() {
             let mut out = Vec::new();
             let transmit = self.image_mode() == crate::graphics::direct::ImageMode::Placeholders;
-            let icons = self.cfg.general.pixel_buttons;
-            if icons {
-                self.button_icons.update(&self.theme, self.cell_px);
+            let (buttons, apps) = (self.cfg.general.pixel_buttons, self.cfg.general.pixel_icons);
+            if buttons || apps {
+                // App icons come on each background they are drawn on: panel, active task, menu
+                // and selected menu row.
+                let t = &self.theme;
+                let backgrounds =
+                    if apps { vec![t.panel_bg, t.task_active_bg, t.menu_bg, t.menu_sel_bg] } else { Vec::new() };
+                let battery = self.tray.battery_pct.filter(|_| apps).map(|(pct, _)| pct);
+                self.icons.prepare(t, self.cell_px, buttons, &backgrounds, battery);
             }
             let windows = self.wm.windows.iter_mut().map(|w| (w.id, &mut w.term.gfx));
-            let icons = icons.then_some((crate::graphics::icons::OWNER, &mut self.button_icons.gfx));
+            let icons = (buttons || apps).then_some((crate::graphics::icons::OWNER, &mut self.icons.gfx));
             self.host_gfx.sync(windows.chain(icons), &mut out, transmit);
             if !out.is_empty() {
                 display.send_raw(&out);
@@ -1805,10 +1814,35 @@ impl App {
         Ok(())
     }
 
-    /// A window's image, or a title bar icon.
+    /// The host image id to draw `icon` with, when icons of its kind are on and the terminal
+    /// shows images; None means draw text instead.
+    pub fn icon(&self, icon: crate::graphics::icons::Icon) -> Option<u32> {
+        let on = match icon {
+            crate::graphics::icons::Icon::Button { .. } => self.cfg.general.pixel_buttons,
+            _ => self.cfg.general.pixel_icons,
+        };
+        if !on || !self.graphics_enabled() || self.capturing {
+            return None;
+        }
+        self.host_gfx.host_id(crate::graphics::icons::OWNER, self.icons.id(icon)?)
+    }
+
+    /// The icon for a window in the task manager: its app's category when it was launched from
+    /// the app list, else a terminal.
+    pub fn window_kind(&self, w: &crate::wm::Window) -> crate::graphics::icons::Kind {
+        use crate::graphics::icons::Kind;
+        let program = |cmd: &str| cmd.split_whitespace().next().map(str::to_string);
+        let Some(launched) = w.launch.as_deref().and_then(program) else { return Kind::Terminal };
+        self.apps
+            .iter()
+            .find(|a| program(&a.command).as_deref() == Some(launched.as_str()))
+            .map_or(Kind::Terminal, |a| Kind::of_category(&a.category))
+    }
+
+    /// A window's image, or an icon.
     fn image(&self, win: u64, img: u32) -> Option<&crate::graphics::ImageData> {
         if win == crate::graphics::icons::OWNER {
-            return self.button_icons.gfx.images.get(&img);
+            return self.icons.gfx.images.get(&img);
         }
         self.wm.get(win)?.term.gfx.images.get(&img)
     }

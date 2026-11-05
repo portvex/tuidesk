@@ -128,6 +128,7 @@ pub struct General {
     pub images: bool,
     pub image_protocol: String,
     pub pixel_buttons: bool,
+    pub pixel_icons: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

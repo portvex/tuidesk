@@ -7,8 +7,8 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::app::{App, Hits, Mode, PanelHit, RenameTarget, screen_layout};
-use crate::graphics::icons::{self, id as icon_id};
+use crate::app::{App, Hits, MenuItem, Mode, PanelHit, RenameTarget, screen_layout};
+use crate::graphics::icons::{self, Icon};
 use crate::settings::{Edit, Kind, PAGES, Row};
 use crate::theme::Theme;
 use crate::tray::Charge;
@@ -39,8 +39,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     for w in app.wm.stacking() {
         let is_focused = focused == Some(w.id);
         let images = (app.graphics_enabled() && !app.capturing).then_some(&app.host_gfx);
-        let icons = images.filter(|_| app.cfg.general.pixel_buttons);
-        draw_window(buf, w, &app.theme, is_focused, dim && !is_focused, images, icons);
+        let hover = app.hover.filter(|(id, _)| *id == w.id).map(|(_, b)| b);
+        let button = |b: Button| {
+            let hovered = hover == Some(b);
+            (hovered, app.icon(Icon::button(b, w.maximized, is_focused, hovered)))
+        };
+        draw_window(buf, w, &app.theme, is_focused, dim && !is_focused, images, &button);
     }
     if app.mode == Mode::Overview {
         draw_overview(buf, desktop, app);
@@ -633,6 +637,22 @@ fn image_style(base: Style, host_id: u32, placement: u32) -> Style {
     base.fg(rgb(host_id)).underline_color(rgb(placement))
 }
 
+/// Draw an icon (see `graphics::icons`) at x, y: the placeholder cells for its host image.
+fn put_icon(buf: &mut Buffer, x: u16, y: u16, host_id: u32, (cols, rows): (u16, u16), base: Style) {
+    let pid = crate::graphics::HostGraphics::placement_id(cols, rows);
+    for row in 0..rows {
+        for col in 0..cols {
+            let (cx, cy) = (x + col, y + row);
+            if !buf.area.contains((cx, cy).into()) {
+                continue;
+            }
+            if let Some(sym) = crate::graphics::placeholder(row as usize, col as usize) {
+                buf[(cx, cy)].set_symbol(&sym).set_style(image_style(base, host_id, pid));
+            }
+        }
+    }
+}
+
 fn color_id(c: AnsiColor) -> u32 {
     match c {
         AnsiColor::Spec(Rgb { r, g, b }) => (r as u32) << 16 | (g as u32) << 8 | b as u32,
@@ -659,7 +679,8 @@ fn draw_window(
     focused: bool,
     dim: bool,
     images: Option<&crate::graphics::HostGraphics>,
-    icons: Option<&crate::graphics::HostGraphics>,
+    // Whether a title bar button is under the pointer, and its icon if it has one.
+    button: &dyn Fn(Button) -> (bool, Option<u32>),
 ) {
     let f = w.frame.intersection(buf.area);
     if f.width < 4 || f.height < 3 {
@@ -692,21 +713,21 @@ fn draw_window(
     let avail = title_end.saturating_sub(f.x + 2) as usize;
     put(buf, f.x + 2, f.y, &truncate(&title, avail), title_end, title_style);
     for (r, b) in btns {
-        // As an icon: placeholder cells for the button's image (see graphics::icons).
-        let icon = icons.and_then(|host| host.host_id(crate::graphics::icons::OWNER, icon_id(b, w.maximized, focused)));
-        if let Some(hid) = icon.filter(|_| r.width == icons::COLS && r.right() <= buf.area.right()) {
-            let pid = crate::graphics::HostGraphics::placement_id(icons::COLS, icons::ROWS);
-            for col in 0..r.width {
-                if let Some(sym) = crate::graphics::placeholder(0, col as usize) {
-                    buf[(r.x + col, r.y)].set_symbol(&sym).set_style(image_style(bar, hid, pid));
-                }
-            }
+        let (hovered, icon) = button(b);
+        if let Some(hid) = icon.filter(|_| r.width == 3) {
+            put_icon(buf, r.x, r.y, hid, (3, 1), bar);
             continue;
         }
         let (label, style) = match b {
             Button::Minimize => ("[_]", bar),
             Button::Maximize => (if w.maximized { "[v]" } else { "[^]" }, bar),
             Button::Close => ("[x]", if focused { bar.fg(theme.button_close) } else { bar }),
+        };
+        // Under the pointer: reverse video, and red for close.
+        let style = match (hovered, b) {
+            (true, Button::Close) => bar.bg(theme.button_close).fg(theme.title_active_fg),
+            (true, _) => style.add_modifier(Modifier::REVERSED),
+            _ => style,
         };
         put(buf, r.x, r.y, label, r.right(), style.add_modifier(Modifier::BOLD));
     }
@@ -820,6 +841,8 @@ struct Item {
     text: String,
     style: Style,
     hit: Option<PanelHit>,
+    /// An icon over the first two cells of `text` (which leaves them blank).
+    icon: Option<u32>,
     /// Leave a space after this item.
     gap: bool,
 }
@@ -859,6 +882,7 @@ fn pager(app: &App) -> Vec<Item> {
                 text: format!(" {} ", app.desktop_label(d)),
                 style,
                 hit: Some(PanelHit::Desktop(d)),
+                icon: None,
                 gap: d + 1 == n,
             }
         })
@@ -868,7 +892,8 @@ fn pager(app: &App) -> Vec<Item> {
 fn single(app: &App, name: &str) -> Option<Item> {
     let t = &app.theme;
     let base = Style::new().bg(t.panel_bg).fg(t.panel_fg);
-    let item = |text: String, style: Style, hit: Option<PanelHit>| Some(Item { text, style, hit, gap: true });
+    let item =
+        |text: String, style: Style, hit: Option<PanelHit>| Some(Item { text, style, hit, icon: None, gap: true });
     match name {
         "kickoff" => {
             let style = if app.mode == Mode::Kickoff {
@@ -892,7 +917,13 @@ fn single(app: &App, name: &str) -> Option<Item> {
                 Charge::Discharging => "",
             };
             let style = if pct < 15.0 && state == Charge::Discharging { base.fg(t.urgent) } else { base };
-            item(format!("BAT {pct:.0}%{mark}"), style, None)
+            match app.icon(Icon::battery(pct)) {
+                // The icon shows the charge; the number and the charging mark stay text.
+                Some(hid) => {
+                    Some(Item { text: format!("   {pct:.0}%{mark}"), style, hit: None, icon: Some(hid), gap: true })
+                }
+                None => item(format!("BAT {pct:.0}%{mark}"), style, None),
+            }
         }
         "bell" => {
             let n = app.notes.unread;
@@ -908,7 +939,7 @@ fn single(app: &App, name: &str) -> Option<Item> {
         n if n.starts_with("lua:") => {
             // Multi-line widget text is meant for the desktop; the panel shows the first line.
             let text = app.plugins.widget_text(&n[4..])?.lines().next().unwrap_or("").to_string();
-            (!text.is_empty()).then_some(Item { text, style: base, hit: None, gap: true })
+            (!text.is_empty()).then_some(Item { text, style: base, hit: None, icon: None, gap: true })
         }
         "tasks" | "spacer" | "pager" => None,
         other => item(format!("?{other}"), base.fg(t.urgent), None),
@@ -934,6 +965,7 @@ fn draw_panel(buf: &mut Buffer, panel: Rect, app: &mut App) {
             text: " PREFIX ".into(),
             style: Style::new().bg(t.urgent).fg(t.panel_bg).add_modifier(Modifier::BOLD),
             hit: None,
+            icon: None,
             gap: true,
         });
     }
@@ -942,6 +974,9 @@ fn draw_panel(buf: &mut Buffer, panel: Rect, app: &mut App) {
     for it in &left {
         let start = x;
         x = put(buf, x, y, &it.text, panel.right(), it.style);
+        if let Some(hid) = it.icon.filter(|_| x >= start + 2) {
+            put_icon(buf, start, y, hid, (2, 1), it.style);
+        }
         if let Some(h) = it.hit {
             app.hits.panel.push((Rect::new(start, y, x - start, 1), h));
         }
@@ -974,6 +1009,9 @@ fn draw_panel(buf: &mut Buffer, panel: Rect, app: &mut App) {
         rx += it.gap as u16;
         let start = rx;
         rx = put(buf, rx, y, &it.text, panel.right(), it.style);
+        if let Some(hid) = it.icon.filter(|_| rx >= start + 2) {
+            put_icon(buf, start, y, hid, (2, 1), it.style);
+        }
         if let Some(h) = it.hit {
             app.hits.panel.push((Rect::new(start, y, rx.saturating_sub(start), 1), h));
         }
@@ -1005,9 +1043,15 @@ fn draw_panel(buf: &mut Buffer, panel: Rect, app: &mut App) {
             base
         };
         let label = if w.minimized { format!("({})", w.title()) } else { w.title() };
-        let label = format!(" {} ", truncate(&label, each.saturating_sub(3) as usize));
+        // With an icon, the title follows it: " ii title ".
+        let icon = app.icon(Icon::app(app.window_kind(w), style.bg.unwrap_or(t.panel_bg))).filter(|_| each >= 8);
+        let (lx, room) = if icon.is_some() { (tx + 3, each.saturating_sub(6)) } else { (tx, each.saturating_sub(3)) };
+        let label = format!(" {} ", truncate(&label, room as usize));
         fill(buf, Rect::new(tx, y, each - 1, 1), style);
-        put(buf, tx, y, &label, tx + each - 1, style);
+        if let Some(hid) = icon {
+            put_icon(buf, tx + 1, y, hid, (2, 1), style);
+        }
+        put(buf, lx, y, &label, tx + each - 1, style);
         app.hits.panel.push((Rect::new(tx, y, each - 1, 1), PanelHit::Task(id)));
         tx += each;
     }
@@ -1156,8 +1200,22 @@ fn draw_kickoff(buf: &mut Buffer, desktop: Rect, app: &mut App) -> Option<(u16, 
         if sel {
             fill(buf, row_rect, ns);
         }
-        let nx = put(buf, r.x + 3, y, &truncate(&name, name_w), inner_right, ns);
-        put(buf, nx.max(r.x + 3 + name_w as u16 + 2), y, &desc, inner_right - 1, ds);
+        // With an icon, the name moves right to make room for it: "  ii name".
+        let kind = match item {
+            MenuItem::App(i) => app.apps.get(*i).map_or(icons::Kind::Other, |a| icons::Kind::of_category(&a.category)),
+            MenuItem::Run(_) => icons::Kind::Terminal,
+            MenuItem::Settings => icons::Kind::System,
+            MenuItem::Reload | MenuItem::Detach | MenuItem::Quit => icons::Kind::Power,
+        };
+        let name_x = match app.icon(Icon::app(kind, ns.bg.unwrap_or(t.menu_bg))) {
+            Some(hid) => {
+                put_icon(buf, r.x + 2, y, hid, (2, 1), ns);
+                r.x + 5
+            }
+            None => r.x + 3,
+        };
+        let nx = put(buf, name_x, y, &truncate(&name, name_w), inner_right, ns);
+        put(buf, nx.max(name_x + name_w as u16 + 2), y, &desc, inner_right - 1, ds);
         app.hits.menu_items.push((row_rect, i));
     }
     if items.len() > visible && visible > 0 {

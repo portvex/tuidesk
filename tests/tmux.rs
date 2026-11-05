@@ -36,10 +36,10 @@ impl Desk {
         for sub in ["cfg", "run", "state", "work"] {
             std::fs::create_dir_all(dir.join(sub)).unwrap();
         }
-        // The screen is read back as text, so the title bar buttons stay text even when the
-        // terminal running the tests shows images (Sixel through tmux, for one).
+        // The screen is read back as text, so the title bar buttons and the panel stay text even
+        // when the terminal running the tests shows images (Sixel through tmux, for one).
         let config = format!(
-            "[general]\nshell = \"/bin/sh\"\nnotification_timeout = 30\npixel_buttons = false\n{extra_config}\n\n\
+            "[general]\nshell = \"/bin/sh\"\nnotification_timeout = 30\npixel_buttons = false\npixel_icons = false\n{extra_config}\n\n\
              [[apps]]\nname = \"Echo Test\"\ncommand = \"sh -c 'echo LAUNCHED-$((40+2)); sleep 600'\"\ncategory = \"Test\"\n"
         );
         std::fs::write(dir.join("cfg/config.toml"), config).unwrap();
@@ -772,7 +772,9 @@ fn desktop_widgets_show_and_notes_open_in_editor() {
     let s = d.wait_for("notes widget", |s| s.contains("Todo") && s.contains("buy-milk") && s.contains("write-tests"));
     assert!(!s.contains("CPU ["), "sysinfo is only on desktop 2");
     // The clock shows the year in big digits: check the weekday line below it instead.
-    let weekday = String::from_utf8(Command::new("date").arg("+%A").output().unwrap().stdout).unwrap();
+    // tuidesk names days in English whatever the locale, so ask date for English too.
+    let weekday =
+        String::from_utf8(Command::new("date").env("LC_ALL", "C").arg("+%A").output().unwrap().stdout).unwrap();
     assert!(s.contains(weekday.trim()), "{s}");
     let (x, y) = find_text(&s, "buy-milk").unwrap();
     d.mouse(0, x, y, false);
@@ -1014,4 +1016,36 @@ fn settings_dialog_previews_saves_and_discards() {
     // The saved settings stay in effect without a reload notification.
     let s = d.screen();
     assert!(top(&s) && !s.contains("Configuration reloaded"), "{s}");
+}
+
+#[test]
+fn title_bar_button_under_the_pointer_is_highlighted() {
+    let Some(d) = Desk::start("hover", "") else { return };
+    d.open_shell();
+    let screen = d.screen();
+    let (row, line) = screen.lines().enumerate().find(|(_, l)| l.contains("[_]")).expect("a minimize button");
+    let col = line[..line.find("[_]").unwrap()].chars().count();
+    // With colors: reverse video (SGR 7) right before the button's text.
+    let styled = || d.tmux(&["capture-pane", "-p", "-e", "-t", "main"]);
+    let reversed = |s: &str| {
+        s.lines().nth(row).is_some_and(|l| {
+            let at = l.find("[_]").unwrap_or(0);
+            let sgr = &l[..at];
+            sgr.rfind("\x1b[").is_some_and(|i| sgr[i..].trim_end_matches('m').split([';', '[']).any(|p| p == "7"))
+        })
+    };
+    assert!(!reversed(&styled()), "not highlighted before the pointer comes");
+    // Pointer motion without a button (SGR 35) over the button, then away from it.
+    d.mouse(35, col + 1, row, false);
+    let start = Instant::now();
+    while !reversed(&styled()) {
+        assert!(start.elapsed() < TIMEOUT, "minimize not highlighted:\n{}", styled());
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    d.mouse(35, col + 1, row + 3, false);
+    let start = Instant::now();
+    while reversed(&styled()) {
+        assert!(start.elapsed() < TIMEOUT, "highlight not cleared:\n{}", styled());
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }
