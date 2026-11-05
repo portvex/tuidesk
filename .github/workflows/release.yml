@@ -63,7 +63,9 @@ jobs:
 
   dist-macos:
     needs: [version, checks]
-    runs-on: macos-latest
+    # Intel: the arm64 runners were often unavailable (jobs not picked up for 15 minutes). The
+    # job cross-compiles both architectures, so the host's makes no difference to the result.
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
