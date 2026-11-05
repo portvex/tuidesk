@@ -157,8 +157,20 @@ fn env_supports_placeholders() -> bool {
 
 /// Terminals known to show iTerm2 inline images: iTerm2, WezTerm and VS Code.
 fn env_supports_iterm() -> bool {
-    let var = |k: &str| std::env::var(k).unwrap_or_default().to_ascii_lowercase();
-    matches!(var("TERM_PROGRAM").as_str(), "iterm.app" | "wezterm" | "vscode") || var("LC_TERMINAL") == "iterm2"
+    let var = |k: &str| std::env::var(k).unwrap_or_default();
+    iterm_terminal(&var("TERM_PROGRAM"), &var("LC_TERMINAL"))
+}
+
+/// Whether TERM_PROGRAM and LC_TERMINAL name a terminal that shows iTerm2 images. The terminal
+/// sets TERM_PROGRAM itself, so it decides. LC_TERMINAL counts only without it: ssh forwards
+/// LC_* but not TERM_PROGRAM, while any other terminal started from iTerm2 (Terminal.app, say)
+/// inherits LC_TERMINAL=iTerm2 and would then get images it cannot show.
+fn iterm_terminal(term_program: &str, lc_terminal: &str) -> bool {
+    match term_program.to_ascii_lowercase().as_str() {
+        "iterm.app" | "wezterm" | "vscode" => true,
+        "" => lc_terminal.eq_ignore_ascii_case("iterm2"),
+        _ => false,
+    }
 }
 
 /// Best guess from the environment alone (for a server before any client attaches).
@@ -450,6 +462,18 @@ impl Drop for Display {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn iterm_images_follow_the_terminal_not_an_inherited_lc_terminal() {
+        assert!(iterm_terminal("iTerm.app", "iTerm2"));
+        assert!(iterm_terminal("WezTerm", ""));
+        // Over ssh only LC_TERMINAL arrives.
+        assert!(iterm_terminal("", "iTerm2"));
+        // Terminal.app (or tmux) started from iTerm2 inherits LC_TERMINAL.
+        assert!(!iterm_terminal("Apple_Terminal", "iTerm2"));
+        assert!(!iterm_terminal("tmux", "iTerm2"));
+        assert!(!iterm_terminal("", ""));
+    }
 
     #[test]
     fn frames_round_trip() {
