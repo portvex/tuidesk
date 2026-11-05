@@ -3,6 +3,15 @@
 # Full checks before pushing.
 set -e
 
+# Upload the Git LFS objects (the README screenshots) these refs need. It reads the refs from
+# stdin, so it runs first.
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs pre-push "$@"
+else
+  echo "pre-push: git-lfs is not installed; it is needed to push docs/screenshots (https://git-lfs.com)" >&2
+  exit 2
+fi
+
 # The coverage check runs the whole test suite once, instrumented; without cargo-llvm-cov
 # just run the tests.
 if command -v cargo-llvm-cov >/dev/null 2>&1 && command -v rustup >/dev/null 2>&1; then
