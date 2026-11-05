@@ -68,9 +68,6 @@ Terminal.app:
 
 ![The same desktop in Terminal.app, which shows no images: text title bar buttons and panel](docs/screenshots/legacy.png)
 
-The screenshots are stored with [Git LFS](https://git-lfs.com) (`git lfs install` once before
-cloning, or `git lfs pull` after).
-
 ## Build and run
 
 ```sh
