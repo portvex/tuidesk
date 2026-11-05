@@ -62,8 +62,13 @@ your shell) runs inside them.
 </table>
 
 Shown in Ghostty with the Breeze Dark theme; the title bar buttons, app and battery icons are
-pictures on terminals that show images (see [Images](#images)) and text elsewhere. The
-screenshots are stored with [Git LFS](https://git-lfs.com) (`git lfs install` once before
+pictures on terminals that show images (see [Images](#images)). Terminals without images get
+the same desktop in text: `[_] [^] [x]` buttons, task titles and `BAT 100%`, here in macOS
+Terminal.app:
+
+![The same desktop in Terminal.app, which shows no images: text title bar buttons and panel](docs/screenshots/legacy.png)
+
+The screenshots are stored with [Git LFS](https://git-lfs.com) (`git lfs install` once before
 cloning, or `git lfs pull` after).
 
 ## Build and run
