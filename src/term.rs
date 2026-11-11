@@ -824,7 +824,7 @@ impl Drop for Term {
 /// Working directory of a process.
 pub fn process_cwd(pid: u32) -> Option<PathBuf> {
     use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
-    let mut sys = System::new();
+    let mut sys = System::new().ok()?;
     let pid = Pid::from_u32(pid);
     sys.refresh_processes_specifics(
         ProcessesToUpdate::Some(&[pid]),

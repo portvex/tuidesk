@@ -2,7 +2,7 @@
 name = "tuidesk"
 version = "0.2.2"
 edition = "2024"
-# sysinfo 0.39 needs 1.95.
+# sysinfo 0.40 needs 1.95.
 rust-version = "1.95"
 publish = false
 description = "A KDE Plasma style desktop that runs inside a terminal"
@@ -75,7 +75,7 @@ ratatui = "0.30"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 starship-battery = "0.12"
-sysinfo = "0.39"
+sysinfo = "0.40"
 toml = "1"
 toml_edit = "0.25.17"
 unicode-width = "0.2"
