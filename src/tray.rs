@@ -10,7 +10,8 @@ pub enum Charge {
 }
 
 pub struct Tray {
-    sys: System,
+    /// None where sysinfo cannot read the system; CPU and memory then stay at zero.
+    sys: Option<System>,
     battery: Option<starship_battery::Manager>,
     /// None until the first refresh (subtracting from Instant::now() can panic soon after boot).
     last_sys: Option<Instant>,
@@ -30,7 +31,7 @@ impl Default for Tray {
 impl Tray {
     pub fn new() -> Self {
         let mut t = Self {
-            sys: System::new(),
+            sys: System::new().ok(),
             battery: starship_battery::Manager::new().ok(),
             last_sys: None,
             last_battery: None,
@@ -47,11 +48,13 @@ impl Tray {
     pub fn refresh(&mut self) -> bool {
         let mut changed = false;
         if self.last_sys.is_none_or(|t| t.elapsed() >= Duration::from_secs(2)) {
-            self.sys.refresh_cpu_usage();
-            self.sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
-            self.cpu = self.sys.global_cpu_usage();
-            self.mem_used = self.sys.used_memory();
-            self.mem_total = self.sys.total_memory();
+            if let Some(sys) = &mut self.sys {
+                sys.refresh_cpu_usage();
+                sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
+                self.cpu = sys.global_cpu_usage();
+                self.mem_used = sys.used_memory();
+                self.mem_total = sys.total_memory();
+            }
             self.last_sys = Some(Instant::now());
             changed = true;
         }
