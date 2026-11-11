@@ -63,7 +63,7 @@ alacritty_terminal = "0.26"
 anyhow = "1"
 base64 = "0.22"
 chrono = "0.4"
-color_quant = "1"
+color_quant = "2"
 crossterm = { version = "0.29", features = ["serde"] }
 dirs = "7"
 flate2 = "1"
