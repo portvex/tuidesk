@@ -4,6 +4,10 @@ version = "0.0.0"
 publish = false
 edition = "2024"
 
+# Its own workspace: cargo-fuzz builds it apart from tuidesk, with its own Cargo.lock.
+[workspace]
+members = ["."]
+
 [package.metadata]
 cargo-fuzz = true
 

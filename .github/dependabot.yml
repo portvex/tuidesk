@@ -1,0 +1,28 @@
+# Dependabot: weekly update pull requests for the Rust crates and the GitHub Actions used by the
+# workflows. Minor and patch bumps are grouped into one pull request per ecosystem; major bumps
+# come one at a time. The pull requests run ci.yml like any other, so they merge only when the
+# checks (including cargo deny and cargo audit) pass.
+version: 2
+updates:
+  # The workspace (tuidesk and xtask) shares the root Cargo.lock; fuzz is excluded from the
+  # workspace and has its own.
+  - package-ecosystem: cargo
+    directories: ["/", "/fuzz"]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: deps
+    groups:
+      cargo-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions-minor:
+        update-types: [minor, patch]
