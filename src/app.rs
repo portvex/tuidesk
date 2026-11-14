@@ -687,11 +687,12 @@ impl App {
             let mode = std::mem::replace(&mut self.mode, Mode::Normal);
             self.capturing = true;
             let backend = ratatui::backend::TestBackend::new(self.screen.width, self.screen.height);
-            let mut term = ratatui::Terminal::new(backend).map_err(|e| e.to_string())?;
+            // the test backend cannot fail (its error type is `Infallible`)
+            let Ok(mut term) = ratatui::Terminal::new(backend);
             let drawn = term.draw(|f| crate::ui::draw(f, self)).map(|_| ());
             self.mode = mode;
             self.capturing = false;
-            drawn.map_err(|e| e.to_string())?;
+            let Ok(()) = drawn;
             let buf = term.backend().buffer().clone();
             let defaults =
                 (shot::rgb(self.theme.term_fg, (252, 252, 252)), shot::rgb(self.theme.wallpaper, (27, 43, 58)));
