@@ -399,9 +399,14 @@ fn session_restores_windows_and_directories() {
     d.wait_for("exit message", |s| s.contains("[session default exited]"));
     d.run_client();
     d.wait_for("restored window", |s| s.contains("[x]"));
-    std::thread::sleep(Duration::from_millis(300));
-    d.type_line("pwd");
-    d.wait_for("restored directory", |s| s.lines().any(|l| l.contains("/project-dir") && !l.contains("pwd")));
+    // Type only once the restored shell shows its prompt, not after a fixed delay.
+    d.wait_for("restored shell prompt", |s| {
+        s.lines().any(|l| l.trim_start().trim_start_matches('│').starts_with("$ "))
+    });
+    // A short marker (a long path could wrap); the computed suffix keeps the echoed
+    // command line from matching.
+    d.type_line("case $PWD in */project-dir) echo IN-DIR-$((40+2));; esac");
+    d.wait_for("restored directory", |s| s.contains("IN-DIR-42"));
 }
 
 #[test]
