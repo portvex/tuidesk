@@ -1,6 +1,6 @@
 [package]
 name = "tuidesk"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 # sysinfo 0.40 needs 1.95.
 rust-version = "1.95"
