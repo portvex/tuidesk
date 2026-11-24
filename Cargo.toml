@@ -1,6 +1,6 @@
 [package]
 name = "tuidesk"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 # sysinfo 0.40 needs 1.95.
 rust-version = "1.95"
@@ -9,7 +9,6 @@ description = "A KDE Plasma style desktop that runs inside a terminal"
 authors = ["portvex"]
 license = "MIT"
 repository = "https://github.com/portvex/tuidesk"
-homepage = "https://github.com/portvex/tuidesk"
 readme = "README.md"
 keywords = ["terminal", "tui", "desktop", "window-manager", "multiplexer"]
 categories = ["command-line-utilities"]
@@ -62,12 +61,12 @@ assets = [
 alacritty_terminal = "0.26"
 anyhow = "1"
 base64 = "0.23"
-chrono = "0.4"
 color_quant = "2"
 crossterm = { version = "0.29", features = ["serde"] }
 dirs = "7"
 flate2 = "1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
+jiff = "1"
 libc = "0.2"
 mlua = { version = "0.12", features = ["lua54", "vendored"] }
 portable-pty = "0.9"

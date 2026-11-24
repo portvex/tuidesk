@@ -696,8 +696,8 @@ impl App {
             let buf = term.backend().buffer().clone();
             let defaults =
                 (shot::rgb(self.theme.term_fg, (252, 252, 252)), shot::rgb(self.theme.wallpaper, (27, 43, 58)));
-            let stamp = chrono::Local::now();
-            let title = format!("tuidesk {}", stamp.format("%Y-%m-%d %H:%M:%S"));
+            let stamp = crate::ui::local_now();
+            let title = format!("tuidesk {}", crate::ui::strftime(&stamp, "%Y-%m-%d %H:%M:%S"));
             let content = shot::render(&buf, area, format, defaults, &title);
             let path = match path {
                 Some(p) => p,
@@ -705,7 +705,7 @@ impl App {
                     let dir = config::expand_tilde(&self.cfg.screenshot.dir);
                     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
                     // Milliseconds keep names unique and sorted by time; never overwrite anyway.
-                    let base = format!("tuidesk-{}", stamp.format("%Y%m%d-%H%M%S-%3f"));
+                    let base = format!("tuidesk-{}", crate::ui::strftime(&stamp, "%Y%m%d-%H%M%S-%3f"));
                     let ext = format.extension();
                     (1..)
                         .map(|n| {

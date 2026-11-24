@@ -227,11 +227,11 @@ fn hvp_cursor_positioning_lands_in_place() {
     let Some(d) = Desk::start("hvp", "") else { return };
     d.open_shell();
     d.prefix("m");
-    d.type_line("clear; printf '\\033[5;10fHVP-OK'; sleep 600");
+    // The marker is assembled by printf so the echoed command line cannot match it.
+    d.type_line("clear; printf '\\033[5;10f%s-%s' HVP OK; sleep 600");
     let s = d.wait_for("HVP output", |s| s.contains("HVP-OK"));
     // Maximized: content starts at screen column 1, row 1, so CSI 5;10 f is row 5, column 10.
-    let line: Vec<char> = s.lines().nth(5).unwrap().chars().collect();
-    let found: String = line[10..16].iter().collect();
+    let found: String = s.lines().nth(5).unwrap().chars().skip(10).take(6).collect();
     assert_eq!(found, "HVP-OK", "screen:\n{s}");
 }
 
@@ -399,9 +399,14 @@ fn session_restores_windows_and_directories() {
     d.wait_for("exit message", |s| s.contains("[session default exited]"));
     d.run_client();
     d.wait_for("restored window", |s| s.contains("[x]"));
-    std::thread::sleep(Duration::from_millis(300));
-    d.type_line("pwd");
-    d.wait_for("restored directory", |s| s.lines().any(|l| l.contains("/project-dir") && !l.contains("pwd")));
+    // Type only once the restored shell shows its prompt, not after a fixed delay.
+    d.wait_for("restored shell prompt", |s| {
+        s.lines().any(|l| l.trim_start().trim_start_matches('│').starts_with("$ "))
+    });
+    // A short marker (a long path could wrap); the computed suffix keeps the echoed
+    // command line from matching.
+    d.type_line("case $PWD in */project-dir) echo IN-DIR-$((40+2));; esac");
+    d.wait_for("restored directory", |s| s.contains("IN-DIR-42"));
 }
 
 #[test]
@@ -888,7 +893,7 @@ fn region_screenshot_by_dragging() {
 
 #[test]
 fn invalid_clock_format_does_not_crash() {
-    let Some(d) = Desk::start("badclock", "[panel]\nclock_format = \"%Q\"\n") else { return };
+    let Some(d) = Desk::start("badclock", "[panel]\nclock_format = \"%E\"\n") else { return };
     d.wait_for("placeholder clock", |s| s.lines().last().is_some_and(|l| l.trim_end().ends_with('?')));
     assert!(d.msg(&["windows"]).0, "server must still answer");
 }
