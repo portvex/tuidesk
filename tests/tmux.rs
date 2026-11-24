@@ -227,11 +227,11 @@ fn hvp_cursor_positioning_lands_in_place() {
     let Some(d) = Desk::start("hvp", "") else { return };
     d.open_shell();
     d.prefix("m");
-    d.type_line("clear; printf '\\033[5;10fHVP-OK'; sleep 600");
+    // The marker is assembled by printf so the echoed command line cannot match it.
+    d.type_line("clear; printf '\\033[5;10f%s-%s' HVP OK; sleep 600");
     let s = d.wait_for("HVP output", |s| s.contains("HVP-OK"));
     // Maximized: content starts at screen column 1, row 1, so CSI 5;10 f is row 5, column 10.
-    let line: Vec<char> = s.lines().nth(5).unwrap().chars().collect();
-    let found: String = line[10..16].iter().collect();
+    let found: String = s.lines().nth(5).unwrap().chars().skip(10).take(6).collect();
     assert_eq!(found, "HVP-OK", "screen:\n{s}");
 }
 
