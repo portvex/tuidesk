@@ -191,8 +191,17 @@ impl Drop for Desk {
     fn drop(&mut self) {
         let _ = Command::new(BIN).args(["kill"]).env("TUIDESK_RUNTIME_DIR", self.dir.join("run")).output();
         self.tmux(&["kill-server"]);
+        // `tuidesk kill` returns once the socket closes, while the server is still exiting:
+        // let it and the client finish (a coverage build writes its profile on exit, and a
+        // signal mid-write leaves a corrupt one that fails the coverage report).
+        let cfg = self.dir.join("cfg");
+        let running = || Command::new("pgrep").arg("-f").arg(&cfg).output().is_ok_and(|o| o.status.success());
+        let start = Instant::now();
+        while running() && start.elapsed() < Duration::from_secs(5) {
+            std::thread::sleep(Duration::from_millis(20));
+        }
         // Last resort: no server for this test's config may outlive it.
-        let _ = Command::new("pkill").arg("-f").arg(self.dir.join("cfg")).output();
+        let _ = Command::new("pkill").arg("-f").arg(&cfg).output();
         let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
