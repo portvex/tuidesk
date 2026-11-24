@@ -118,20 +118,29 @@ fn fill(buf: &mut Buffer, r: Rect, style: Style) {
     }
 }
 
-/// The local time zone: `TZ` or `/etc/localtime`, then (as chrono did) `/etc/timezone`,
-/// and UTC when none of them can be used.
+/// The local time zone: `TZ` or `/etc/localtime`; failing that (as chrono did) the zone
+/// `/etc/localtime` links to, then `/etc/timezone`, and UTC when none can be used.
 pub fn local_tz() -> jiff::tz::TimeZone {
-    jiff::tz::TimeZone::try_system().unwrap_or_else(|_| {
-        // Read once: this path only runs on systems without a usable /etc/localtime,
-        // and the clock asks for the zone on every frame.
-        static FROM_FILE: std::sync::OnceLock<Option<jiff::tz::TimeZone>> = std::sync::OnceLock::new();
-        FROM_FILE
+    use jiff::tz::TimeZone;
+    // jiff caches only a zone it found, so after one failure the fallback is kept: the
+    // clock asks for the zone on every frame.
+    static FALLBACK: std::sync::OnceLock<TimeZone> = std::sync::OnceLock::new();
+    if let Some(tz) = FALLBACK.get() {
+        return tz.clone();
+    }
+    TimeZone::try_system().unwrap_or_else(|_| {
+        FALLBACK
             .get_or_init(|| {
-                let name = std::fs::read_to_string("/etc/timezone").ok()?;
-                jiff::tz::TimeZone::get(name.trim()).ok()
+                let linked = std::fs::read_link("/etc/localtime").ok().and_then(|p| {
+                    let p = p.to_string_lossy().into_owned();
+                    let name = p.split_once("zoneinfo/")?.1.to_string();
+                    TimeZone::get(&name).ok()
+                });
+                linked
+                    .or_else(|| TimeZone::get(std::fs::read_to_string("/etc/timezone").ok()?.trim()).ok())
+                    .unwrap_or(TimeZone::UTC)
             })
             .clone()
-            .unwrap_or(jiff::tz::TimeZone::UTC)
     })
 }
 
