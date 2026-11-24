@@ -8,11 +8,7 @@ version = 2
 # Security advisories always fail; unmaintained crates and yanked versions too.
 yanked = "deny"
 unmaintained = "workspace"
-ignore = [
-    # No known vulnerability and no fixed release. Moving to jiff changes how user
-    # clock_format strings are parsed, so it is a separate change.
-    { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained; used only for the local clock, screenshot names and notification times" },
-]
+ignore = []
 
 [licenses]
 version = 2

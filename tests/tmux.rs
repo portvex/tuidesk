@@ -888,7 +888,7 @@ fn region_screenshot_by_dragging() {
 
 #[test]
 fn invalid_clock_format_does_not_crash() {
-    let Some(d) = Desk::start("badclock", "[panel]\nclock_format = \"%Q\"\n") else { return };
+    let Some(d) = Desk::start("badclock", "[panel]\nclock_format = \"%E\"\n") else { return };
     d.wait_for("placeholder clock", |s| s.lines().last().is_some_and(|l| l.trim_end().ends_with('?')));
     assert!(d.msg(&["windows"]).0, "server must still answer");
 }

@@ -6,7 +6,7 @@ pub struct Notification {
     pub created: Instant,
     pub timeout: Duration,
     pub dismissed: bool,
-    pub created_at: chrono::DateTime<chrono::Local>,
+    pub created_at: jiff::ZonedDateTime,
 }
 
 impl Notification {
@@ -33,7 +33,7 @@ impl Notifications {
             created: Instant::now(),
             timeout,
             dismissed: false,
-            created_at: chrono::Local::now(),
+            created_at: crate::ui::local_now(),
         });
         self.unread += 1;
         if self.items.len() > HISTORY {

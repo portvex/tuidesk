@@ -118,15 +118,91 @@ fn fill(buf: &mut Buffer, r: Rect, style: Style) {
     }
 }
 
-/// Format a time, showing "?" for an invalid format instead of panicking (chrono's
-/// `to_string` panics on unknown specifiers, and the format comes from the config).
-fn strftime(t: &chrono::DateTime<chrono::Local>, fmt: &str) -> String {
-    use std::fmt::Write as _;
-    let mut out = String::new();
-    match write!(out, "{}", t.format(fmt)) {
-        Ok(()) => out,
-        Err(_) => "?".into(),
+/// The local time zone: `TZ` or `/etc/localtime`, then (as chrono did) `/etc/timezone`,
+/// and UTC when none of them can be used.
+pub fn local_tz() -> jiff::tz::TimeZone {
+    jiff::tz::TimeZone::try_system().unwrap_or_else(|_| {
+        // Read once: this path only runs on systems without a usable /etc/localtime,
+        // and the clock asks for the zone on every frame.
+        static FROM_FILE: std::sync::OnceLock<Option<jiff::tz::TimeZone>> = std::sync::OnceLock::new();
+        FROM_FILE
+            .get_or_init(|| {
+                let name = std::fs::read_to_string("/etc/timezone").ok()?;
+                jiff::tz::TimeZone::get(name.trim()).ok()
+            })
+            .clone()
+            .unwrap_or(jiff::tz::TimeZone::UTC)
+    })
+}
+
+/// The current local time. If the system clock is outside the range jiff supports,
+/// the Unix epoch is used instead of panicking.
+pub fn local_now() -> jiff::ZonedDateTime {
+    let now = jiff::Timestamp::try_from(std::time::SystemTime::now()).unwrap_or(jiff::Timestamp::UNIX_EPOCH);
+    now.to_zoned_datetime(local_tz())
+}
+
+/// Format a time with a strftime format, showing "?" for an invalid format instead of
+/// failing (the format comes from the config).
+pub fn strftime(t: &jiff::ZonedDateTime, fmt: &str) -> String {
+    jiff::fmt::strtime::format(compat_format(fmt, t.subsec_nanosecond()), t).unwrap_or_else(|_| "?".into())
+}
+
+/// chrono's `%.f`: nothing for a whole second, else 3, 6 or 9 digits, whichever is
+/// exact. (jiff's `%.f` drops trailing zeros instead.)
+fn chrono_fraction(nanos: i32) -> &'static str {
+    if nanos == 0 {
+        ""
+    } else if nanos % 1_000_000 == 0 {
+        "%.3f"
+    } else if nanos % 1_000 == 0 {
+        "%.6f"
+    } else {
+        "%.9f"
     }
+}
+
+/// Rewrite the few strftime specifiers that jiff renders differently from the chrono
+/// formatting tuidesk used before, so existing `clock_format` settings look the same.
+/// `nanos` is the sub-second part of the time being formatted.
+fn compat_format(fmt: &str, nanos: i32) -> String {
+    let mut out = String::with_capacity(fmt.len());
+    let mut chars = fmt.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        let Some(spec) = chars.next() else {
+            // A trailing `%` stays invalid, so the result is "?".
+            out.push('%');
+            break;
+        };
+        match spec {
+            'c' => out.push_str("%a %b %e %H:%M:%S %Y"),
+            'x' => out.push_str("%m/%d/%y"),
+            'r' => out.push_str("%I:%M:%S %p"),
+            'v' => out.push_str("%e-%b-%Y"),
+            'f' => out.push_str("%9f"),
+            '+' => {
+                out.push_str("%Y-%m-%dT%H:%M:%S");
+                out.push_str(chrono_fraction(nanos));
+                out.push_str("%:z");
+            }
+            // `%.f` without a width; `%.3f` and the like pass through unchanged.
+            '.' if chars.peek() == Some(&'f') => {
+                chars.next();
+                out.push_str(chrono_fraction(nanos));
+            }
+            // chrono's local time zone has no name; it showed the UTC offset.
+            'Z' => out.push_str("%:z"),
+            other => {
+                out.push('%');
+                out.push(other);
+            }
+        }
+    }
+    out
 }
 
 /// Write text clipped to `max_x` (exclusive). Returns the x after the text.
@@ -372,10 +448,10 @@ fn draw_desktop_widgets(buf: &mut Buffer, area: Rect, app: &mut App) {
         }
         let (title, lines, boxed): (Option<String>, Vec<String>, bool) = match wcfg.kind.as_str() {
             "clock" => {
-                let now = chrono::Local::now();
+                let now = local_now();
                 let time = strftime(&now, wcfg.format.as_deref().unwrap_or("%H:%M"));
                 let mut lines = big_text(&time, t.border != crate::theme::BorderStyle::Ascii);
-                let date = now.format("%A, %d %B").to_string();
+                let date = strftime(&now, "%A, %d %B");
                 let w = lines[0].width();
                 lines.push(String::new());
                 lines.push(format!("{:^w$}", date, w = w.max(date.len())));
@@ -933,9 +1009,7 @@ fn single(app: &App, name: &str) -> Option<Item> {
                 item("[-]".into(), base.fg(t.menu_dim), Some(PanelHit::Bell))
             }
         }
-        "clock" => {
-            item(strftime(&chrono::Local::now(), &app.cfg.panel.clock_format), base.add_modifier(Modifier::BOLD), None)
-        }
+        "clock" => item(strftime(&local_now(), &app.cfg.panel.clock_format), base.add_modifier(Modifier::BOLD), None),
         n if n.starts_with("lua:") => {
             // Multi-line widget text is meant for the desktop; the panel shows the first line.
             let text = app.plugins.widget_text(&n[4..])?.lines().next().unwrap_or("").to_string();
@@ -1254,7 +1328,7 @@ fn draw_history(buf: &mut Buffer, desktop: Rect, app: &mut App) {
     }
     for (row, note) in app.notes.items.iter().rev().take(h as usize - 4).enumerate() {
         let y = r.y + 1 + row as u16;
-        let x = put(buf, r.x + 2, y, &note.created_at.format("%H:%M ").to_string(), r.right() - 1, dimmed);
+        let x = put(buf, r.x + 2, y, &strftime(&note.created_at, "%H:%M "), r.right() - 1, dimmed);
         let x = put(buf, x, y, &note.title, r.right() - 1, base.add_modifier(Modifier::BOLD));
         let body = note.body.replace('\n', " ");
         let sep = if note.title.is_empty() { "" } else { ": " };
@@ -1693,13 +1767,52 @@ mod tests {
     use super::*;
 
     #[test]
+    fn strftime_matches_the_former_chrono_output() {
+        let tz = jiff::tz::TimeZone::fixed(jiff::tz::offset(4));
+        let t = jiff::civil::date(2026, 11, 24).at(13, 45, 1, 999_000_000).to_zoned_datetime(tz.clone()).unwrap();
+        // Expected strings are what chrono produced for the same instant.
+        for (fmt, want) in [
+            ("%a %d %b  %H:%M", "Tue 24 Nov  13:45"),
+            ("%A, %d %B", "Tuesday, 24 November"),
+            ("%I:%M %p %y %j %m", "01:45 PM 26 328 11"),
+            ("%Y%m%d-%H%M%S-%3f", "20261124-134501-999"),
+            ("%c", "Tue Nov 24 13:45:01 2026"),
+            ("%x", "11/24/26"),
+            ("%r", "01:45:01 PM"),
+            ("%v", "24-Nov-2026"),
+            ("%f", "999000000"),
+            ("%+", "2026-11-24T13:45:01.999+04:00"),
+            ("%Z", "+04:00"),
+            ("100%% %%c", "100% %c"),
+        ] {
+            assert_eq!(strftime(&t, fmt), want, "{fmt}");
+        }
+        let early = jiff::civil::date(2026, 1, 5).at(0, 7, 9, 0).to_zoned_datetime(tz.clone()).unwrap();
+        assert_eq!(strftime(&early, "%e|%-d|%H:%M:%S"), " 5|5|00:07:09");
+        // chrono's %.f and %+ print 0, 3, 6 or 9 fraction digits, never a trimmed count.
+        for (nanos, frac) in [(0, ""), (120_000_000, ".120"), (100_000, ".000100"), (7, ".000000007")] {
+            let t = jiff::civil::date(2026, 11, 24).at(13, 45, 1, nanos).to_zoned_datetime(tz.clone()).unwrap();
+            assert_eq!(strftime(&t, "%S%.f"), format!("01{frac}"), "{nanos}");
+            assert_eq!(strftime(&t, "%+"), format!("2026-11-24T13:45:01{frac}+04:00"), "{nanos}");
+            assert_eq!(strftime(&t, "%.3f"), format!(".{:03}", nanos / 1_000_000), "{nanos}");
+        }
+        // Malformed or unusual formats never panic; invalid ones show "?".
+        for fmt in ["%", "%.", "%-", "%é", "%.é", "%%.f", "ü%.f%"] {
+            let _ = strftime(&t, fmt);
+        }
+        assert_eq!(strftime(&t, "%"), "?");
+        assert_eq!(strftime(&t, "%%.f"), "%.f");
+    }
+
+    #[test]
     fn wraps_and_truncates() {
         assert_eq!(truncate("hello world", 6), "hello~");
         assert_eq!(truncate("hi", 6), "hi");
         // Placeholder cells must take exactly one column, or ratatui would misplace cells.
         assert_eq!(crate::graphics::placeholder(3, 7).unwrap().width(), 1);
-        let t = chrono::Local::now();
-        assert_eq!(strftime(&t, "%Q"), "?");
+        let t = local_now();
+        assert_eq!(strftime(&t, "%E"), "?");
+        assert_eq!(strftime(&t, "trailing %"), "?");
         assert_eq!(strftime(&t, "%Y").len(), 4);
         assert_eq!(truncate_start("/a/b/target-dir", 11), "~target-dir");
         assert_eq!(truncate_start("short", 11), "short");
