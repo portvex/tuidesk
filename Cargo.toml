@@ -9,7 +9,6 @@ description = "A KDE Plasma style desktop that runs inside a terminal"
 authors = ["portvex"]
 license = "MIT"
 repository = "https://github.com/portvex/tuidesk"
-homepage = "https://github.com/portvex/tuidesk"
 readme = "README.md"
 keywords = ["terminal", "tui", "desktop", "window-manager", "multiplexer"]
 categories = ["command-line-utilities"]

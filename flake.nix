@@ -45,7 +45,8 @@
             installManPage man/tuidesk.1 man/tuidesk-config.5 man/tuidesk-lua.7
           '';
           meta = {
-            inherit (manifest) description homepage;
+            inherit (manifest) description;
+            homepage = manifest.repository;
             license = pkgs.lib.licenses.mit;
             mainProgram = "tuidesk";
             platforms = systems;
